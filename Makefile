@@ -1,4 +1,6 @@
-CXX=clang++
+
+#CXX=clang++
+CXX=g++-11
 CXXFLAGS = -std=c++20 -pthread -MD -MP
 LDFLAGS :=
 
@@ -18,6 +20,7 @@ endif
 
 # Find all subdirectories
 INCLUDES = $(shell find $(SRCDIR) -type d | sed s/^/-I/)
+INCLUDES += -I../libchess/include -I./include -I../eval-handcrafted/include
 
 ifeq ($(LEARNING), 1)
 	CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0 -DLEARNING=1
