@@ -8,6 +8,8 @@ DEPDIR	= ./include
 BINDIR = ./bin
 OUTPUT = $(BINDIR)/engine
 
+-include local.mk
+
 #  Release version is compiled with optimisation flag
 ifeq ($(RELEASE), 1)
 	CXXFLAGS += -Ofast
