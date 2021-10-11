@@ -1,4 +1,4 @@
-#include "./policy.hpp"
+#include "./policy_handcrafted.hpp"
 
 #include <chess/chess.hpp>
 #include <mcts/misc.hpp>

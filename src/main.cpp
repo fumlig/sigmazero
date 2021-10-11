@@ -1,6 +1,6 @@
 #include <chess/chess.hpp>
 #include <mcts/node.hpp>
-#include <mcts/policy.hpp>
+#include <mcts/policy_handcrafted.hpp>
 #include <mcts/rollout.hpp>
 #include <mcts/mcts_model.hpp>
 #include <eval-handcrafted/eval.hpp>
