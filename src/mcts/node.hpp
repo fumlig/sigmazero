@@ -7,8 +7,6 @@
 #include <mcts/misc.hpp>
 #include <vector>
 #include <float.h>
-#include <math.h>
-#include <iterator>
 #include <memory>
 
 namespace node

@@ -5,9 +5,6 @@
 #include <mcts/policy.hpp>
 #include <mcts/misc.hpp>
 #include <vector>
-#include <iterator>
-#include <float.h>
-#include <math.h>
 #include <memory>
 
 namespace node

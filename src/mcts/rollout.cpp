@@ -1,12 +1,6 @@
-
-
 #include "./rollout.hpp"
 #include <chess/chess.hpp>
 #include <mcts/policy.hpp>
-#include <iostream>
-
-#include <random>
-#include <algorithm>
 
 namespace rollout
 {
@@ -23,7 +17,6 @@ double AveragedRollout::operator()(const chess::position &state, chess::side pla
     for (int i = 0; i < n_iter; ++i)
     {
         chess::position rollout_state = state;
-        // by default, do random rollouts
         short uneventful_timer = 0;
         while (!rollout_state.is_checkmate() && !rollout_state.is_stalemate() && uneventful_timer < 50)
         {
@@ -46,9 +39,5 @@ double AveragedRollout::operator()(const chess::position &state, chess::side pla
     return accumulated_t / n_iter;
 }
 
-
-
-
-    
 
 } // namespace rollout
