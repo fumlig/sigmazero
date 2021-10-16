@@ -1,4 +1,3 @@
-import torch
 from torch import nn as nn
 
 """
@@ -15,10 +14,10 @@ class ResidualLayer(nn.Module):
         super().__init__()
         self.CONV_CHANNELS = conv_channels
         self.conv1 = nn.conv2d(in_channels=self.CONV_CHANNELS, out_channels=self.CONV_CHANNELS, kernel_size=3),
-        self.batchnorm1 = nn.BatchNorm2d(num_features=self.CONV_CHANNELS),
+        self.batchnorm1 = nn.BatchNorm2d(num_features=self.CONV_CHANNELS), #TODO
         self.relu = nn.ReLU(),
         self.conv2 = nn.conv2d(in_channels=self.CONV_CHANNELS, out_channels=self.CONV_CHANNELS, kernel_size=3),
-        self.batchnorm2 = nn.BatchNorm2d(num_features=self.CONV_CHANNELS),
+        self.batchnorm2 = nn.BatchNorm2d(num_features=self.CONV_CHANNELS), #TODO
  
     def forward(self, x):
         y = self.conv1(x)
@@ -32,7 +31,9 @@ class ResidualLayer(nn.Module):
 
 
 class SigmaModel(nn.Module):
-
+    """
+    Main model definition
+    """
     
     def __init__(self, input_shape, conv_channels : int=256, n_residual_layers : int=40):
         self.CONV_CHANNELS = conv_channels
@@ -41,7 +42,7 @@ class SigmaModel(nn.Module):
 
         self.input_conv = nn.Sequential(
             nn.Conv2d(in_channels=1, out_channels=self.CONV_CHANNELS, kernel_size=3),
-            nn.BatchNorm2d(num_features=self.CONV_CHANNELS),
+            nn.BatchNorm2d(num_features=self.CONV_CHANNELS), #TODO
             nn.ReLU()
         )
         
@@ -51,7 +52,7 @@ class SigmaModel(nn.Module):
         
         self.value_head = nn.Sequential(
             nn.Conv2d(in_channels=self.CONV_CHANNELS, out_channels=1, kernel_size=1),
-            nn.BatchNorm2d(num_features=1),
+            nn.BatchNorm2d(num_features=1), #TODO
             nn.ReLU(),
             nn.Linear(in_features=1, out_features=1), #TODO
             nn.ReLU(),
@@ -61,7 +62,7 @@ class SigmaModel(nn.Module):
 
         self.policy_head = nn.Sequential(
             nn.Conv2d(in_channels=self.CONV_CHANNELS, out_channels=2, kernel_size=1),
-            nn.BatchNorm2d(num_features=2),
+            nn.BatchNorm2d(num_features=2), #TODO
             nn.ReLU(),
             nn.Linear(in_features=2, out_features=2) #TODO
         )
