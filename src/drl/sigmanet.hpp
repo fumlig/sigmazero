@@ -7,9 +7,9 @@
 class residual_block : public torch::nn::Module {
 
     torch::nn::Conv2d conv1;
-    torch::n::BatchNorm2d batchnorm1;
+    torch::nn::BatchNorm2d batchnorm1;
     torch::nn::Conv2d conv2;
-    torch::n::BatchNorm2d batchnorm2;
+    torch::nn::BatchNorm2d batchnorm2;
 
 public:
 
@@ -33,5 +33,7 @@ public:
 
     std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor x);
 };
+
+torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p);
 
 #endif

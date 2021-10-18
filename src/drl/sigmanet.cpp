@@ -79,3 +79,10 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
 
     return std::make_pair(value, policy);
 }
+
+torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p) {
+    torch::Tensor value_loss = torch::mean((z-v)*(z-v));
+    torch::Tensor policy_loss = torch::dot(pi, torch::log(p));
+    torch::Tensor loss = torch::add(value_loss, policy_loss);
+    return loss;
+}
