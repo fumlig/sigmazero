@@ -3,10 +3,10 @@
 residual_block::residual_block(int filters) {
     
     conv1 = torch::nn::Conv2d(torch::nn::Conv2dOptions(filters, filters, 3));
-    batchnorm1 = torch::nn::BatchNorm2d(filters)
+    batchnorm1 = torch::nn::BatchNorm2d(filters);
 
     conv2 = torch::nn::Conv2d(torch::nn::Conv2dOptions(filters, filters, 3));
-    batchnorm2 = torch::nn::BatchNorm2d(filters)
+    batchnorm2 = torch::nn::BatchNorm2d(filters);
 
     register_module("conv1", conv1);
     register_module("batchnorm1", batchnorm1);
@@ -50,7 +50,7 @@ sigmanet::sigmanet(int channels, int filters, int blocks) {
         torch::nn::ReLU(),
         torch::nn::Linear(8 * 8, 256),
         torch::nn::ReLU(),
-        torch::nn::Flatten(-2, -1),
+        torch::nn::Flatten(torch::nn::FlattenOptions().start_dim(-2).end_dim(-1)),
         torch::nn::Linear(256, 1),
         torch::nn::Tanh()
     );
@@ -59,8 +59,8 @@ sigmanet::sigmanet(int channels, int filters, int blocks) {
         torch::nn::Conv2d(torch::nn::Conv2dOptions(filters, 2, 1)),
         torch::nn::BatchNorm2d(2),
         torch::nn::ReLU(),
-        torch::nn::Flatten(-3, -1),
-        torch::nn::Linear(2 * 8 * 8, 1337), // Change 1337 to number of output moves
+        torch::nn::Flatten(torch::nn::FlattenOptions().start_dim(-3).end_dim(-1)),
+        torch::nn::Linear(2 * 8 * 8, 1337) // Change 1337 to number of output moves
     );
 
     register_module("input_conv", input_conv);
@@ -74,8 +74,8 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
     x = input_conv->forward(x);
     x = residual->forward(x);
 
-    value = value_head(x);
-    policy = policy_head(x);
+    auto value = value_head->forward(x);
+    auto policy = policy_head->forward(x);
 
     return std::make_pair(value, policy);
 }

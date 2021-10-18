@@ -6,10 +6,10 @@
 
 class residual_block : public torch::nn::Module {
 
-    torch::nn::Conv2d conv1;
-    torch::nn::BatchNorm2d batchnorm1;
-    torch::nn::Conv2d conv2;
-    torch::nn::BatchNorm2d batchnorm2;
+    torch::nn::Conv2d conv1 = nullptr;
+    torch::nn::BatchNorm2d batchnorm1 = nullptr;
+    torch::nn::Conv2d conv2 = nullptr;
+    torch::nn::BatchNorm2d batchnorm2 = nullptr;
 
 public:
 
@@ -17,19 +17,19 @@ public:
 
     torch::Tensor forward(torch::Tensor x);
 
-}
+};
 
 
 class sigmanet : public torch::nn::Module {
 
-    torch::nn::Sequential input_conv;
-    torch::nn::Sequential residual;
-    torch::nn::Sequential value_head;
-    torch::nn::Sequential policy_head;
+    torch::nn::Sequential input_conv = nullptr;
+    torch::nn::Sequential residual = nullptr;
+    torch::nn::Sequential value_head = nullptr;
+    torch::nn::Sequential policy_head = nullptr;
 
 public:
 
-    sigmanet(int filters, int blocks);
+    sigmanet(int channels, int filters, int blocks);
 
     std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor x);
 };

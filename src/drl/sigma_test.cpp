@@ -25,10 +25,10 @@ int main()
     int n_moves = 1337; // Change in sigmanet as well
     torch::Tensor input_state = torch::rand({batch_size, in_channels, 8, 8}, device);
     // Create dummy output data
-    torch::Tensor value_targets = torch.rand({batch_size, 1}, device);
-    torch::Tensor policy_targets = torch.rand({batch_size, n_moves}, device);
+    torch::Tensor value_targets = torch::rand({batch_size, 1}, device);
+    torch::Tensor policy_targets = torch::rand({batch_size, n_moves}, device);
     // Initialize model loss and optimizer
-    sigmanet model{n_filters, n_blocks};
+    sigmanet model{in_channels, n_filters, n_blocks};
     model.to(device);
     model.train();
     // TODO: Move model to gpu if available?
