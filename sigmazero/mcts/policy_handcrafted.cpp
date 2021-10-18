@@ -1,8 +1,8 @@
-#include "./policy_handcrafted.hpp"
+#include "policy_handcrafted.hpp"
 
 #include <chess/chess.hpp>
-#include <mcts/misc.hpp>
-#include <eval-handcrafted/eval.hpp>
+#include "misc.hpp"
+#include <eval/eval.hpp>
 
 #include <random>
 #include <algorithm>

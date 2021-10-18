@@ -1,5 +1,5 @@
 
-#include "./misc.hpp"
+#include "misc.hpp"
 #include <chrono>
 #include <fstream>
 #include <unordered_map>

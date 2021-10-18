@@ -1,8 +1,8 @@
-#include "./mcts_model.hpp"
-#include <mcts/node.hpp>
-#include <mcts/misc.hpp>
-#include <mcts/rollout.hpp>
-#include <mcts/policy.hpp>
+#include "mcts_model.hpp"
+#include "node.hpp"
+#include "misc.hpp"
+#include "rollout.hpp"
+#include "policy.hpp"
 #include <chess/chess.hpp>
 #include <memory>
 #include <string>

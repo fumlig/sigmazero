@@ -1,0 +1,1 @@
+option('_GLIBCXX_USE_CXX11_ABI', type : 'integer', value : 1, description : 'The Torch installation uses C++11 ABI')

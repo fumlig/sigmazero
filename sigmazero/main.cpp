@@ -1,9 +1,9 @@
 #include <chess/chess.hpp>
-#include <mcts/node.hpp>
-#include <mcts/policy_handcrafted.hpp>
-#include <mcts/rollout.hpp>
-#include <mcts/mcts_model.hpp>
-#include <eval-handcrafted/eval.hpp>
+#include "mcts/node.hpp"
+#include "mcts/policy_handcrafted.hpp"
+#include "mcts/rollout.hpp"
+#include "mcts/mcts_model.hpp"
+#include <eval/eval.hpp>
 #include <iostream>
 #include <string>
 #include <memory>

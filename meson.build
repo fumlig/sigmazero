@@ -9,6 +9,10 @@ thread_dep = dependency('threads')
 libchess_inc = include_directories('libchess')
 libchess_dep = declare_dependency(include_directories : libchess_inc)
 
+# handcrafted
+handcrafted_inc = include_directories('handcrafted/include')
+handcrafted_dep = declare_dependency(include_directories : handcrafted_inc)
+
 # libtorch
 py_mod = import('python')
 py_installation = py_mod.find_installation('python3', modules : ['torch'])
@@ -25,9 +29,9 @@ openmp_dep = dependency('openmp')
 
 libtorch_dep = cpp_compiler.find_library('libtorch', dirs : pytorch_lib_dir)
 libtorch_cpu_dep = cpp_compiler.find_library('libtorch_cpu', dirs : pytorch_lib_dir)
-libtorch_cuda_dep = cpp_compiler.find_library('libtorch_cuda', dirs : pytorch_lib_dir)
+libtorch_cuda_dep = cpp_compiler.find_library('libtorch_cuda', dirs : pytorch_lib_dir, required : false)
 libc10_dep = cpp_compiler.find_library('libc10', dirs : pytorch_lib_dir)
-libc10_cuda_dep = cpp_compiler.find_library('libc10_cuda', dirs : pytorch_lib_dir)
+libc10_cuda_dep = cpp_compiler.find_library('libc10_cuda', dirs : pytorch_lib_dir, required : false)
 libgomp_dep = cpp_compiler.find_library('libgomp', dirs : pytorch_lib_dir)
 
 torch_inc = include_directories(run_command('scripts/rel_from_abs_path.py', pytorch_include_dir, meson.source_root()).stdout().strip(), run_command('scripts/rel_from_abs_path.py', pytorch_api_include_dir, meson.source_root()).stdout().strip())
@@ -45,7 +49,7 @@ endif
 torch_dep = declare_dependency(
 	include_directories : torch_inc,
 	dependencies : torch_lib,
-	compile_args : ['-D_GLIBCXX_USE_CXX11_ABI=0'],
+	compile_args : ['-D_GLIBCXX_USE_CXX11_ABI=@0@'.format(get_option('_GLIBCXX_USE_CXX11_ABI'))],
 	link_args : ['-Wl,--no-as-needed']  
 )
 
@@ -66,6 +70,27 @@ example_src = [
 example = executable(
 	'example',
 	common_src + example_src,
-	include_directories : [common_inc, torch_inc],
+	include_directories : [common_inc],
 	dependencies : [libchess_dep, thread_dep, torch_dep]
+)
+
+# sigmazero
+sigmazero_src = [
+	'sigmazero/main.cpp',
+	'sigmazero/drl/sigmanet.cpp',
+	'sigmazero/mcts/mcts_model.cpp',
+	'sigmazero/mcts/misc.cpp',
+	'sigmazero/mcts/node.cpp',
+	'sigmazero/mcts/misc.cpp',
+	'sigmazero/mcts/node.cpp',
+	'sigmazero/mcts/policy_handcrafted.cpp',
+	'sigmazero/mcts/policy.cpp',
+	'sigmazero/mcts/rollout.cpp',
+]
+
+sigmazero = executable(
+	'sigmazero',
+	common_src + sigmazero_src,
+	include_directories : [common_inc],
+	dependencies : [libchess_dep, thread_dep, torch_dep, handcrafted_dep]
 )

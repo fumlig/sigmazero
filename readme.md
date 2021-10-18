@@ -19,7 +19,8 @@ pip install -r requirements.txt
 # setup build directory
 meson build
 # to choose non-default compiler like clang, do `CXX=clang++ meson <builddir>`
-# to select build type, do meson <builddir> --buildtype={debug,release}
+# to select build type, do `meson <builddir> --buildtype={debug,release}`
+# if the build fails with some torch error, try `meson <builddir> -D_GLIBCXX_USE_CXX11_ABI=0
 ```
 
 To build:
@@ -53,6 +54,12 @@ Ensure that CUDA is available:
 
 ```sh
 ./scripts/has_cuda.py
+```
+
+Set up build directory:
+
+```sh
+meson build -D_GLIBCXX_USE_CXX11_ABI=0
 ```
 
 ## engines

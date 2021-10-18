@@ -1,6 +1,6 @@
-#include "./policy.hpp"
+#include "policy.hpp"
 
-#include <mcts/misc.hpp>
+#include "misc.hpp"
 
 
 namespace policy

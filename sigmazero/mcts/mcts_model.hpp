@@ -1,10 +1,10 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-#include <mcts/node.hpp>
-#include <mcts/misc.hpp>
-#include <mcts/rollout.hpp>
-#include <mcts/policy.hpp>
+#include "node.hpp"
+#include "misc.hpp"
+#include "rollout.hpp"
+#include "policy.hpp"
 #include <chess/chess.hpp>
 #include <memory>
 #include <string>

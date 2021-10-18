@@ -3,7 +3,7 @@
 
 #include <functional>
 #include <chess/chess.hpp>
-#include <mcts/policy.hpp>
+#include "policy.hpp"
 
 
 // Stores some different policies that can be used by Node

@@ -1,6 +1,6 @@
 #include "./rollout.hpp"
 #include <chess/chess.hpp>
-#include <mcts/policy.hpp>
+#include "policy.hpp"
 
 namespace rollout
 {

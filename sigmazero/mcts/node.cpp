@@ -1,9 +1,9 @@
 
-#include "./node.hpp"
+#include "node.hpp"
 #include <chess/chess.hpp>
-#include <mcts/rollout.hpp>
-#include <mcts/policy.hpp>
-#include <mcts/misc.hpp>
+#include "rollout.hpp"
+#include "policy.hpp"
+#include "misc.hpp"
 #include <vector>
 #include <memory>
 

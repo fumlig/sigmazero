@@ -1,7 +1,7 @@
 #ifndef POLICY_HANDCRAFTED_H
 #define POLICY_HANDCRAFTED_H
 
-#include <mcts/policy.hpp>
+#include "policy.hpp"
 #include <chess/chess.hpp>
 #include <random>
 
