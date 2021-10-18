@@ -1,0 +1,9 @@
+master:
+  replays: ./replays.pipe
+
+slaves:
+- name: training
+  user: oskar
+  host: 127.0.0.1
+  type: training
+  executable: /home/oskar/studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training
