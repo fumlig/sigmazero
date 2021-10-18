@@ -13,7 +13,7 @@
 
 int main(int argc, char* argv[])
 {
-    std::string config_file_name{"mcts_config.txt"};
+    std::string config_file_name{"sigmazero/mcts_config.txt"};
     if(argc > 1) config_file_name = argv[1];
     std::unordered_map<std::string, int> dict = parse_config(config_file_name);
     int MAX_MOVES = dict["MAX_MOVES"];

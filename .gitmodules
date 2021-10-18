@@ -1,5 +1,5 @@
-[submodule "dep/libchess"]
-	path = dep/libchess
+[submodule "libchess"]
+	path = libchess
 	url = git@gitlab.liu.se:TDDE19-2021-1/libchess.git
 [submodule "dep/eval-handcrafted"]
 	path = dep/eval-handcrafted
