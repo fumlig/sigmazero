@@ -1,8 +1,5 @@
 # Tjack
 
-<<<<<<< HEAD
-## Links
-=======
 ## setup
 
 First time:
@@ -91,6 +88,5 @@ python3 scripts/elo_est.py build/<engine>
 ```
 
 ## links
->>>>>>> main
 
 - [Wiki](https://gitlab.liu.se/groups/tdde19-group-1/-/wikis/home) (for detailed documentation and other resources)
