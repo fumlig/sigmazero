@@ -5,6 +5,8 @@
 
 int main(int argc, char** argv)
 {
+	std::cerr << "training started" << std::endl;
+	
 	std::string replay;
 
 	while(std::getline(std::cin, replay))

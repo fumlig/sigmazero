@@ -3,12 +3,16 @@
 import os
 from slave import Slave
 
-test = Slave()
+selfplay = Slave()
+training = Slave()
 
 replays_read, replays_write = os.pipe()
 
-test.command("./studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay", stdout=replays_write)
+selfplay.copy_id()
+training.copy_id()
 
-with open(replays_read, 'r') as replays_file:
-	while True:
-		print(replays_file.readline())
+selfplay.command("./studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay", stdout=replays_write)
+training.command("./studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training", stdin=replays_read)
+
+while True:
+	print(training.process.stdout.readline())

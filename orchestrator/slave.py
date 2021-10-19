@@ -25,7 +25,7 @@ class Slave(object):
 			capture_output=True
 		)
 
-	def command(self, command: str, arguments: list = None, stdout: int = subprocess.PIPE, stdin: int = subprocess.PIPE, stderr: int = subprocess.STDOUT):
+	def command(self, command: str, arguments: list = None, stdout: int = subprocess.PIPE, stdin: int = subprocess.PIPE, stderr: int = None):
 		if not self.process:
 			self.process = subprocess.Popen(
 				["ssh", self.destination, command] + (arguments if arguments else []),

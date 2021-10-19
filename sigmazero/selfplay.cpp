@@ -6,6 +6,8 @@
 
 int main(int argc, char** argv)
 {
+	std::cerr << "selfplay started" << std::endl;
+
 	while(true)
 	{
 		std::cout << "selfplay game" << std::endl;
