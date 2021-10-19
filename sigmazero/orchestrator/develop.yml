@@ -1,0 +1,13 @@
+replays: ./replays.fifo
+model: ./model.pt
+
+training:
+- host: 127.0.0.1
+
+  executable: ./studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training
+
+selfplay:
+- host: 127.0.0.1
+  executable: ./studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay
+- host: 127.0.0.1
+  executable: ./studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay

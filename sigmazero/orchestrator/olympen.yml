@@ -1,0 +1,16 @@
+
+
+training:
+  replays: ./replays.fifo
+  model: ./model.pt
+  executable: /home/oskar/studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training
+
+selfplay:
+- user: osklu414
+  host: 127.0.0.1
+  model: ./model.pt
+  executable: ./studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay
+- user: osklu414
+  host: 127.0.0.1
+  model: ./model.pt
+  executable: ./studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay
