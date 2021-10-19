@@ -22,3 +22,8 @@ This file is continuosly read and used to update the model.
 	b. Play a game.
 	c. Write game, values and policies.
 
+## Plan
+
+Eventually, we can have one master that handles all distribution.
+Slaves are either trainers or selfplayers. When a trainer has a new
+model it is downloaded by the master, checked if it is better or worse, then uploaded to selfplayers.

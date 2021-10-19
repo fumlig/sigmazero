@@ -1,5 +1,4 @@
 meson
 ninja
 torch
-yq
-jq
+pyyaml

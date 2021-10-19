@@ -6,11 +6,9 @@
 
 int main(int argc, char** argv)
 {
-	std::cout << "running selfplay..." << std::endl;
-
 	while(true)
 	{
-		std::cout << "selfplay replay" << std::endl;
+		std::cout << "selfplay game" << std::endl;
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 

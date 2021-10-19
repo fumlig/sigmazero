@@ -97,12 +97,12 @@ sigmazero = executable(
 
 training = executable(
 	'training',
-	['sigmazero/training/main.cpp'],
+	['sigmazero/training.cpp'],
 	dependencies : [libchess_dep, torch_dep]
 )
 
 selfplay = executable(
 	'selfplay',
-	['sigmazero/selfplay/main.cpp'],
+	['sigmazero/selfplay.cpp'],
 	dependencies : [libchess_dep, torch_dep]
 )
