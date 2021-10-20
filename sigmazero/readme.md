@@ -1,5 +1,15 @@
 # Sigma Zero
 
+## Running
+
+To run locally:
+
+```sh
+MODEL=<model> ./selfplay $MODEL | ./training $MODEL
+```
+
+The selfplay will play with the model
+
 ## Training
 
 1. Model is initialized.

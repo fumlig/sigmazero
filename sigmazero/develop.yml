@@ -1,10 +1,9 @@
-replays: ./replays.fifo
-model: ./model.pt
+model: ./model.pt       # location of best model
 
 training:
 - host: 127.0.0.1
-
   executable: ./studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training
+  model: 
 
 selfplay:
 - host: 127.0.0.1
