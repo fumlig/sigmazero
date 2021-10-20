@@ -44,12 +44,6 @@ nvidia-smi
 
 olympen1-117.ad.liu.se is known to not satisfy these requirements and will not work.
 
-Install PyTorch with CUDA support:
-
-```sh
-pip3 install torch==1.9.1+cu111 torchvision==0.10.1+cu111 torchaudio==0.9.1 -f https://download.pytorch.org/whl/torch_stable.html
-```
-
 Ensure that CUDA is available:
 
 ```sh

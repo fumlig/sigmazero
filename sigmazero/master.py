@@ -34,14 +34,14 @@ class Slave(object):
 		subprocess.run(
 			["scp"] + (["-r"] if recursive else []) + [source, f"{self.destination}:{target}"],
 			check=True,
-			capture_output=True
+			capture_output=True,
 		)
 
 	def download(self, source: str, target: str, recursive=False):
 		subprocess.run(
 			["scp"] + (["-r"] if recursive else []) + [f"{self.destination}:{source}", target],
 			check=True,
-			capture_output=True
+			capture_output=True,
 		)
 
 	def authorize(self):
