@@ -15,11 +15,11 @@ int main(int argc, char** argv)
 	}
 
 	std::filesystem::path model_path(argv[1]);
-
-	if(!std::filesystem::exists(model_path) || !std::filesystem::is_regular_file(model_path))
+	
+	while(!std::filesystem::exists(model_path) || !std::filesystem::is_regular_file(model_path))
 	{
-		std::cerr << "selfplay:\tmodel does not exist or is not a file" << std::endl;
-		return 1;
+		std::cerr << "selfplay:\tmodel does not exist or is not a file, waiting..." << std::endl;
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
 	auto model_changed = std::filesystem::last_write_time(model_path);
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 		}
 
 		std::cout << "<game moves> <score> <policy>" << std::endl;
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
 	return 0;

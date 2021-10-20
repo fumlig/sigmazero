@@ -5,35 +5,15 @@
 To run locally:
 
 ```sh
-MODEL=<model> ./selfplay $MODEL | ./training $MODEL
+MODEL=<path to save model to>
+./selfplay $MODEL | ./training $MODEL
 ```
 
-The selfplay will play with the model
+The training process will save its latest model as *model.pt* and receive replays from the selfplay process, which plays with the lastest model.
 
-## Training
+To run in a cluster:
 
-1. Model is initialized.
-2. Self play workers started.
-3. Repeat until training done:
-	a. Push model to workers.
-	b. Read replays from workers.
-	c. Train on replays.
-
-The latest model is saved to disk. Changes to this model are watched with
-inotify. When it is changed, its weights are copied to a predetermined location
-on each worker. The workers are started and their replays are written to a file.
-This file is continuosly read and used to update the model.
-
-## Selfplay
-
-1. Model is initialized.
-2. Repeat until selfplay done:
-	a. Load latest weights.
-	b. Play a game.
-	c. Write game, values and policies.
-
-## Plan
-
-Eventually, we can have one master that handles all distribution.
-Slaves are either trainers or selfplayers. When a trainer has a new
-model it is downloaded by the master, checked if it is better or worse, then uploaded to selfplayers.
+```
+CONFIG=<path to config of master and slaves>
+./master.py --config $CONFIG
+```
