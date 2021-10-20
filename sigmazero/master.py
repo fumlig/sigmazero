@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import os
+import argparse
 import subprocess
+import yaml
 
 
 class Slave(object):
@@ -50,21 +52,68 @@ class Slave(object):
 		)
 
 
-TRAINING = "~/studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training"
-SELFPLAY = "~/studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay"
-MODEL = "~/studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/model.pt"
-
 if __name__ == "__main__":
+
+	parser = argparse.ArgumentParser(description="Sigma Zero master script")
+	parser.add_argument("config", type=str, help="Path to configuration file")
+
+	args = parser.parse_args()
+
+	with open(args.config, "r") as f:
+		config = yaml.safe_load(f)
+
+	model_path = config["model"]
+
 	replays_read, replays_write = os.pipe()
 
-	trainer = Slave()
-	trainer.authorize()
-	training_process = trainer.command(TRAINING, [MODEL], stdin=replays_read)
+	trainers = []
+	selfplayers = []
 
-	selfplayers = [Slave() for _ in range(2)]
-	for selfplayer in selfplayers:
-		selfplayer.authorize()
-		selfplayer.command(SELFPLAY, [MODEL], stdout=replays_write)
+	for training_config in config["training"]:
+		user = training_config.get("user", None)
+		host = training_config.get("host", "127.0.0.1")
+		authorize = training_config.get("authorize", False)
+
+		command = training_config["executable"]
+		arguments = [training_config["model"]]
+
+		training_slave = Slave(host=host, user=user)
+
+		if authorize:
+			training_slave.authorize()
+
+		training_process = training_slave.command(command, arguments, stdin=replays_read)
+
+		trainers.append((training_slave, training_process, training_config))
+		
+
+	for selfplay_config in config["selfplay"]:
+		user = selfplay_config.get("user", None)
+		host = selfplay_config.get("host", "127.0.0.1")
+		authorize = selfplay_config.get("authorize", False)
+
+		command = selfplay_config["executable"]
+		arguments = [selfplay_config["model"]]
+
+		selfplay_slave = Slave(host=host, user=user)
+
+		if authorize:
+			selfplay_slave.authorize()
+
+		selfplay_process = selfplay_slave.command(command, arguments, stdout=replays_write)
+
+		selfplayers.append((selfplay_slave, selfplay_process, selfplay_config))
 
 	while True:
-		print(training_process.stdout.readline().decode().strip())
+		for (training_slave, training_process, training_config) in trainers:
+			while training_event := training_process.stdout.readline().decode().strip():
+				# todo: eventually, merging of models can be done here
+				
+				print("master:", "new model received")
+
+				training_slave.download(training_config["model"], model_path)
+				print("master:", "downloaded model from trainer")
+
+				for (selfplay_slave, _, selfplay_config) in selfplayers:
+					selfplay_slave.upload(model_path, selfplay_config["model"])
+					print("master:", "uploaded model to trainer")
