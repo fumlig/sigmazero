@@ -6,39 +6,33 @@
 
 #include <chess/chess.hpp>
 #include <torch/torch.h>
-
-#include "dummynet.hpp"
-
-std::ostream& info()
-{
-	return std::cerr << "selfplay:\t";
-}
+#include <torch/script.h>
 
 
 int main(int argc, char** argv)
 {
 	if(argc != 2)
 	{
-		info() << "missing model path" << std::endl;
+		std::cerr << "missing model path" << std::endl;
 		return 1;
 	}
 
 	std::filesystem::path model_path(argv[1]);
-	
+
 	while(!std::filesystem::exists(model_path))
 	{
-		info() << "model does not exist, waiting..." << std::endl;
+		std::cerr << "model does not exist, waiting..." << std::endl;
 		std::this_thread::sleep_for(std::chrono::seconds(1));
-	} 
+	}
 
-	dummynet model;
-	torch::load(model, model_path);
+	torch::jit::script::Module model;
 
-	info() << "loaded model" << std::endl;
+	model = torch::jit::load(model_path);
+	std::cerr << "loaded model" << std::endl;
 
 	auto model_changed = std::filesystem::last_write_time(model_path);
 
-	info() << "started with model " << model_path << std::endl;
+	std::cerr << "started with model " << model_path << std::endl;
 
 	while(true)
 	{
@@ -46,14 +40,16 @@ int main(int argc, char** argv)
 
 		if(model_write > model_changed)
 		{
-			info() << "updated model loaded" << std::endl;
-			torch::load(model, model_path);
+			std::cerr << "updated model loaded" << std::endl;
+			model = torch::jit::load(model_path);
 			model_changed = model_write;
 		}
 
+		std::cerr << "sending selfplay game" << std::endl;
+
 		std::cout << "<game moves> <score> <policy>" << std::endl;
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
- 
+
 	return 0;
 }

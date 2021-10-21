@@ -1,17 +1,13 @@
-model: /home/oskar/downloads/model.pt
+workdir: /tmp
 
 training:
 - host: 127.0.0.1
   executable: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training
-  model: downloads/training-model.pt
+  model: /tmp/training-model.pt
   authorize: true
 
 selfplay:
 - host: 127.0.0.1
   executable: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay
   model: downloads/selfplay-model-0.pt
-  authorize: true
-- host: 127.0.0.1
-  executable: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay
-  model: downloads/selfplay-model-1.pt
   authorize: true

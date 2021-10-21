@@ -1,4 +1,4 @@
-model: sigmazero.pt
+workdir: /home/osklu414/downloads
 
 training:
 - host: olympen1-101.ad.liu.se

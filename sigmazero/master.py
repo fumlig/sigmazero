@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import argparse
 import subprocess
 import yaml
+import colorama
+import torch
 
 
 class Slave(object):
-	
-	def __init__(self, host: str = "127.0.0.1", user: str = None):
-		self.host = host
+
+	def __init__(self, user: str = None, host: str = "127.0.0.1"):
 		self.user = user
+		self.host = host
 
 	@property
 	def destination(self):
@@ -27,17 +30,17 @@ class Slave(object):
 
 		if wait:
 			process.wait()
-		
+
 		return process
 
-	def upload(self, source: str, target: str, recursive=False):
+	def upload(self, source: str, target: str, recursive: bool =False):
 		subprocess.run(
 			["scp"] + (["-r"] if recursive else []) + [source, f"{self.destination}:{target}"],
 			check=True,
 			capture_output=True,
 		)
 
-	def download(self, source: str, target: str, recursive=False):
+	def download(self, source: str, target: str, recursive: bool = False):
 		subprocess.run(
 			["scp"] + (["-r"] if recursive else []) + [f"{self.destination}:{source}", target],
 			check=True,
@@ -52,7 +55,72 @@ class Slave(object):
 		)
 
 
+def prefix_pipe(pipe_write: int, prefix: str):
+	# return a file descriptor for which writes will be prefixed with a string
+	prefix_read, prefix_write = os.pipe()
+
+	subprocess.Popen(
+		["sed", "-e", f"s/^/{prefix}/;"],
+		stdin=prefix_read,
+		stdout=pipe_write,
+		stderr=None,
+	)
+
+	return prefix_write
+
+
+def print_info(message: str):
+	print(colorama.Fore.GREEN + "[localhost|master]:\t" + colorama.Fore.RESET + message)
+
+
+class Trainer(Slave):
+
+	def __init__(self, config: dict):
+		super().__init__(user=config.get("user", None), host=config.get("host", "127.0.0.1"))
+
+		self.executable = config["executable"]
+		self.model_path = config["model"]
+
+		if config.get("authorize", False):
+			self.authorize()
+
+	def start_training(self, replays_read: int) -> subprocess.Popen:
+		command = self.executable
+		arguments = [self.model_path]
+		prefix_write = prefix_pipe(None, colorama.Fore.CYAN + f"[{self.destination}|training]:\t" + colorama.Fore.RESET)
+
+		return self.command(command, arguments, stdin=replays_read, stderr=prefix_write)
+
+	def download_model(self, target_path: str):
+		self.download(self.model_path, target_path)
+
+
+class Selfplayer(Slave):
+
+	def __init__(self, config: dict):
+		super().__init__(user=config.get("user", None), host=config.get("host", "127.0.0.1"))
+
+		self.executable = config["executable"]
+		self.model_path = config["model"]
+
+		if config.get("authorize", False):
+			self.authorize()
+
+	def start_selfplay(self, replays_write: int) -> subprocess.Popen:
+		command = self.executable
+		arguments = [self.model_path]
+		prefix_write = prefix_pipe(None, colorama.Fore.MAGENTA + f"[{self.destination}|selfplay]:\t" + colorama.Fore.RESET)
+
+		return self.command(command, arguments, stdout=replays_write, stderr=prefix_write)
+
+	def upload_model(self, source_path: str):
+		self.upload(source_path, self.model_path)
+
+
+
 if __name__ == "__main__":
+
+	colorama.init()
 
 	parser = argparse.ArgumentParser(description="Sigma Zero master script")
 	parser.add_argument("config", type=str, help="Path to configuration file")
@@ -62,7 +130,8 @@ if __name__ == "__main__":
 	with open(args.config, "r") as f:
 		config = yaml.safe_load(f)
 
-	model_path = config["model"]
+	workdir = config["workdir"]
+	model_path = os.path.join(workdir, "model.pt")
 
 	replays_read, replays_write = os.pipe()
 
@@ -70,50 +139,45 @@ if __name__ == "__main__":
 	selfplayers = []
 
 	for training_config in config["training"]:
-		user = training_config.get("user", None)
-		host = training_config.get("host", "127.0.0.1")
-		authorize = training_config.get("authorize", False)
+		trainer = Trainer(training_config)
+		process = trainer.start_training(replays_read)
+		trainers.append((trainer, process))
 
-		command = training_config["executable"]
-		arguments = [training_config["model"]]
-
-		training_slave = Slave(host=host, user=user)
-
-		if authorize:
-			training_slave.authorize()
-
-		training_process = training_slave.command(command, arguments, stdin=replays_read)
-
-		trainers.append((training_slave, training_process, training_config))
-		
+		print_info("started trainer")
 
 	for selfplay_config in config["selfplay"]:
-		user = selfplay_config.get("user", None)
-		host = selfplay_config.get("host", "127.0.0.1")
-		authorize = selfplay_config.get("authorize", False)
+		selfplayer = Selfplayer(selfplay_config)
+		process = selfplayer.start_selfplay(replays_write)
+		selfplayers.append((selfplayer, process))
 
-		command = selfplay_config["executable"]
-		arguments = [selfplay_config["model"]]
-
-		selfplay_slave = Slave(host=host, user=user)
-
-		if authorize:
-			selfplay_slave.authorize()
-
-		selfplay_process = selfplay_slave.command(command, arguments, stdout=replays_write)
-
-		selfplayers.append((selfplay_slave, selfplay_process, selfplay_config))
+		print_info("started selfplay")
 
 	while True:
-		for (training_slave, training_process, training_config) in trainers:
-			while training_event := training_process.stdout.readline().decode().strip():
-				# todo: eventually, merging of models can be done here
-				
-				print("master:", "new model received")
+		models = []
 
-				training_slave.download(training_config["model"], model_path)
-				print("master:", "downloaded model from trainer")
+		for trainer, process in trainers:
+			if process.stdout.readline():
+				trainer.download_model(model_path)
+				print_info(f"downloaded model from trainer {trainer.destination}")
 
-				for (selfplay_slave, _, selfplay_config) in selfplayers:
-					selfplay_slave.upload(model_path, selfplay_config["model"])
-					print("master:", "uploaded model to trainer")
+				model = torch.jit.load(model_path)
+				models.append(model)
+
+		if not models:
+			continue
+
+		# todo:
+		# eventually, merging of models can be done here
+		# also checkpoints, evaluation etc.
+		model = models[0]
+		
+		print(model.__dict__)
+
+		torch.jit.save(model, model_path)
+		print_info(f"merged {len(models)} model(s)")
+
+		for selfplayer, _ in selfplayers:
+			selfplayer.upload_model(model_path)
+			print_info(f"uploaded model to selfplayer")
+
+	colorama.deinit()

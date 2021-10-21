@@ -3,3 +3,4 @@ ninja
 torch
 pyyaml
 numpy
+colorama
