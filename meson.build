@@ -108,3 +108,13 @@ selfplay = executable(
 	dependencies : [libchess_dep, torch_dep],
 	cpp_pch : 'sigmazero/pch.hpp'
 )
+
+sigmanet = executable(
+	'sigmanet',
+	[
+		'sigmazero/drl/sigmanet.cpp',
+		'sigmazero/drl/sigma_test.cpp'
+	],
+	dependencies : [libchess_dep, torch_dep],
+	cpp_pch : 'sigmazero/pch.hpp'
+)
