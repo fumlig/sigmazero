@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 
 	while(std::getline(std::cin, replay))
 	{
-		std::cerr << "replay received: " << replay << std::endl;
+		std::cerr << "replay " << i << '/' << batch_size << " received: " << replay << std::endl;
 
 		if(++i == batch_size)
 		{

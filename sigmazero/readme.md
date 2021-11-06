@@ -1,5 +1,10 @@
 # Sigma Zero
 
+- Selfplay will likely be the bottleneck: one GPU transfer is required per move and it seems difficult to batch.
+- Processes and threads are both cheap in Linux: might as well use multiple selfplay processes on one machine instead of worrying about threads.
+- Trainers and selfplayers should be both be distributable and easily testable locally.
+- A single orchestrator is likely needed to distribute replays across trainers and merge their models.
+
 ## Selfplay
 
 A selfplay process should write replays to standard out, line by line. It should take one argument, a file path to the model file to use for self play. This file should be watched for changes and loaded regularly.
@@ -13,8 +18,14 @@ A training process should read replays from standard in, line by line. It should
 To run locally:
 
 ```sh
-MODEL=<path to save model to>
+# path to store model at
+MODEL=model.pt
+
+# one selfplayer, one trainer
 ./selfplay $MODEL | ./training $MODEL
+
+# three selfplayers, one trainer
+{./selfplay $MODEL & ./selfplay $MODEL & ./selfplay $MODEL} | ./training $MODEL
 ```
 
 The training process will save its latest model as *model.pt* and receive replays from the selfplay process, which plays with the lastest model.

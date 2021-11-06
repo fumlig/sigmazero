@@ -8,6 +8,7 @@
 #include <torch/torch.h>
 #include <torch/script.h>
 
+#include "dummynet.hpp"
 
 int main(int argc, char** argv)
 {
@@ -25,9 +26,9 @@ int main(int argc, char** argv)
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
-	torch::jit::script::Module model;
-
-	model = torch::jit::load(model_path);
+	dummynet model(10, 20);
+	torch::load(model, model_path);
+	
 	std::cerr << "loaded model" << std::endl;
 
 	auto model_changed = std::filesystem::last_write_time(model_path);
@@ -41,7 +42,7 @@ int main(int argc, char** argv)
 		if(model_write > model_changed)
 		{
 			std::cerr << "updated model loaded" << std::endl;
-			model = torch::jit::load(model_path);
+			torch::load(model, model_path);
 			model_changed = model_write;
 		}
 

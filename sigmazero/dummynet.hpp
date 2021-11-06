@@ -1,9 +1,8 @@
 #ifndef SIGMAZERO_DUMMYNET_HPP
 #define SIGMAZERO_DUMMYNET_HPP
 
-
 #include <torch/torch.h>
-#include <cstdint>
+#include <chess/chess.hpp>
 
 // https://pytorch.org/tutorials/advanced/cpp_frontend.html
 // - TORCH_MODULE[_IMPL] is required for torch::{save,load} to work
@@ -21,11 +20,18 @@ struct dummynet_impl: torch::nn::Module
 	{
 		return linear(input) + bias;
 	}
+
+
+	torch::Tensor to_input(const chess::position& position)
+	{
+		
+	}
+
+
 	torch::nn::Linear linear;
 	torch::Tensor bias;
 };
 
 TORCH_MODULE_IMPL(dummynet, dummynet_impl);
-
 
 #endif

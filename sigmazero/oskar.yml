@@ -1,13 +1,14 @@
-workdir: /tmp
+directory: /tmp
+checkpoints: true
+selfplayers: 3
+trainers: 1
 
-training:
+slaves:
 - host: 127.0.0.1
-  executable: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training
-  model: /tmp/training-model.pt
+  name: oskar-laptop
+  gpus: 0
+  cpus: 8
   authorize: true
-
-selfplay:
-- host: 127.0.0.1
-  executable: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay
-  model: downloads/selfplay-model-0.pt
-  authorize: true
+  directory: /tmp
+  selfplay: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay
+  training: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training
