@@ -21,8 +21,11 @@ int main(int argc, char** argv)
 		std::cout << "cuda not available" << std::endl;
 	}
 
-	torch::Tensor tensor = torch::eye(3);
+	torch::Tensor tensor = torch::rand({3,3});
   	std::cerr << tensor << std::endl;
+	std::cerr << torch::flipud(tensor) << std::endl;
+
+	return 0;
 
 	chess::init();
 	random_engine engine;

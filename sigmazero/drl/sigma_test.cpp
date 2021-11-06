@@ -17,7 +17,7 @@ int main()
 {
     torch::Device device(torch::kCPU);
     // Check cuda support
-    if(torch::cuda::is_available)
+    if(torch::cuda::is_available())
     {
         device = torch::Device(torch::kCUDA);
         std::cout << "CUDA is available - using it." << std::endl;
@@ -40,7 +40,7 @@ int main()
     std::cout << "randomised data" << std::endl;
 
     // Initialize model loss and optimizer
-    sigmanet model{in_channels, n_filters, n_blocks};
+    sigmanet model(in_channels, n_filters, n_blocks);
 
     std::cout << "initialised model" << std::endl;
 

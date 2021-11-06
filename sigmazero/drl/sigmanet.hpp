@@ -2,6 +2,7 @@
 #define SIGMANET_H
 
 #include <torch/torch.h>
+#include <chess/chess.hpp>
 #include <utility>
 
 class residual_block : public torch::nn::Module {
@@ -32,6 +33,8 @@ public:
     sigmanet(int channels, int filters, int blocks);
 
     std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor x);
+
+    torch::Tensor encode_input(const chess::position& p);
 };
 
 torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p);
