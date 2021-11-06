@@ -50,7 +50,7 @@ torch_dep = declare_dependency(
 	include_directories : torch_inc,
 	dependencies : torch_lib,
 	compile_args : ['-D_GLIBCXX_USE_CXX11_ABI=@0@'.format(get_option('_GLIBCXX_USE_CXX11_ABI'))],
-	link_args : ['-Wl,--no-as-needed']  
+	link_args : ['-Wl,--no-as-needed']
 )
 
 # common
@@ -105,6 +105,16 @@ training = executable(
 selfplay = executable(
 	'selfplay',
 	['sigmazero/selfplay.cpp'],
+	dependencies : [libchess_dep, torch_dep],
+	cpp_pch : 'sigmazero/pch.hpp'
+)
+
+sigmanet = executable(
+	'sigmanet',
+	[
+		'sigmazero/drl/sigmanet.cpp',
+		'sigmazero/drl/sigma_test.cpp'
+	],
 	dependencies : [libchess_dep, torch_dep],
 	cpp_pch : 'sigmazero/pch.hpp'
 )

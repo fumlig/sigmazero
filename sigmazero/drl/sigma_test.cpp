@@ -1,6 +1,13 @@
 #include <iostream>
 
 #include "sigmanet.hpp"
+
+void save_model(sigmanet& net, const std::string& path) {
+    torch::serialize::OutputArchive output;
+    net.save(output);
+    output.save_to(path);
+}
+
 /*
 Initializes sigmanet model
 Trains the model using dummy data
@@ -20,15 +27,23 @@ int main()
     int n_blocks = 10;
     double c = 0.0001; // L2 Regularization
     // Create dummy input data
-    size_t batch_size = 64;
+    long batch_size = 64;
     int in_channels = 38;
-    int n_moves = 1337; // Change in sigmanet as well
+    int n_moves = 8 * 8 * 73; // Change in sigmanet as well
+
+
     torch::Tensor input_state = torch::rand({batch_size, in_channels, 8, 8}, device);
     // Create dummy output data
     torch::Tensor value_targets = torch::rand({batch_size, 1}, device);
     torch::Tensor policy_targets = torch::rand({batch_size, n_moves}, device);
+
+    std::cout << "randomised data" << std::endl;
+
     // Initialize model loss and optimizer
     sigmanet model{in_channels, n_filters, n_blocks};
+
+    std::cout << "initialised model" << std::endl;
+
     model.to(device);
     model.train();
     // TODO: Move model to gpu if available?
@@ -42,6 +57,8 @@ int main()
 
     for(int i = 0 ; i < n_epochs ; i++)
     {
+
+        std::cout << "Epoch " << i << std::endl;
 
         model.zero_grad();
         auto[value, policy] = model.forward(input_state);
@@ -57,5 +74,9 @@ int main()
     auto[value, policy] = model.forward(test_state);
 
     std::cout << "inference result: " << std::endl << "value: " << value << std::endl << "policy: " << policy << std::endl;
+
+    save_model(model, "test.pt");
+
+    std::cout << "saved model" << std::endl;
 
 }
