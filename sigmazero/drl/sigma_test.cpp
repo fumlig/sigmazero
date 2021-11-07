@@ -28,7 +28,7 @@ int main()
     double c = 0.0001; // L2 Regularization
     // Create dummy input data
     long batch_size = 64;
-    int in_channels = 38;
+    int history = 2;
     int n_moves = 8 * 8 * 73; // Change in sigmanet as well
 
 
@@ -40,7 +40,7 @@ int main()
     std::cout << "randomised data" << std::endl;
 
     // Initialize model loss and optimizer
-    sigmanet model(in_channels, n_filters, n_blocks);
+    sigmanet model(history, n_filters, n_blocks);
 
     std::cout << "initialised model" << std::endl;
 

@@ -32,7 +32,7 @@ torch::Tensor residual_block::forward(torch::Tensor x) {
     return x;
 }
 
-sigmanet::sigmanet(int channels, int filters, int blocks) {
+sigmanet::sigmanet(int history, int filters, int blocks): history{history}, channels{history*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
 
     input_conv = torch::nn::Sequential(
         torch::nn::Conv2d(torch::nn::Conv2dOptions(channels, filters, 3).stride(1).padding(1)),
@@ -72,6 +72,7 @@ sigmanet::sigmanet(int channels, int filters, int blocks) {
     register_module("policy_head", policy_head);
 }
 
+
 std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
 
     x = input_conv->forward(x);
@@ -81,6 +82,105 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
     auto policy = torch::softmax(policy_head->forward(x), -1);
 
     return std::make_pair(value, policy);
+}
+
+
+torch::Tensor encode_input(const chess::game& g)
+{
+    const int planes = channels;
+    torch::Tensor input = torch::empty({planes, 8, 8});
+
+    int j = 0;
+    const chess::position& p = g.get_position();
+    chess::game h = g;
+
+    chess::side p1 = p.get_turn();
+    chess::side p2 = chess::opponent(p1);
+
+    // feature planes
+    bool flip = p1 == chess::side_black;
+
+    for(int i = 0; i < history; i++)
+    {
+        if(!h.empty())
+        {
+            // p1 pieces
+            for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
+            {
+                chess::bitboard bb = h.get_position().get_board().piece_set(static_cast<chess::piece>(p), p1);
+                torch::Tensor plane = bitboard_plane(bb);
+                if(flip) plane = torch::flipud(plane);
+
+                using namespace torch::indexing;
+                input.index_put_({j++}, plane);
+            }
+
+            // p2 pieces
+            for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
+            {
+                chess::bitboard bb = h.get_position().get_board().piece_set(static_cast<chess::piece>(p), p2);
+                torch::Tensor plane = bitboard_plane(bb);
+                if(flip) plane = torch::flipud(plane);
+
+                using namespace torch::indexing;
+                input.index_put_({j++}, plane);
+            }
+
+            // repetitions
+            int repetitions = h.get_repetitions();
+
+            if(repetitions >= 1)
+            {
+                input.index_put_({j}, torch::ones({8, 8}));
+            } j++;
+
+            if(repetitions >= 2)
+            {
+                input.index_put_({j}, torch::ones({8, 8}));
+            } j++;
+
+            // previous position
+            h.pop();
+        }
+        else
+        {
+            // fill with empty planes if no more positions in history
+            for(int k = 0; k < feature_planes; j++)
+            {
+                input.index_put({j++}, torch::zeros({8, 8}));
+            }
+        }
+    }
+    
+    // constant planes
+
+    // color
+    input.index_put_({j++}, static_cast<int>(p1));
+
+    // move count
+    input.index_put_({j++}, p.get_fullmove());
+
+    // p1 castling
+    input.index_put({j++}, p.can_castle_kingside(p1))
+    input.index_put({j++}, p.can_castle_queenside(p1))
+
+    // p2 castling
+    input.index_put({j++}, p.can_castle_kingside(p2))
+    input.index_put({j++}, p.can_castle_queenside(p2))
+
+    // no-progress count
+    input.index_put_({j++}, position.get_halfmove_clock())
+
+    return input;
+}
+
+
+torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p) {
+
+    torch::Tensor value_loss = torch::sum(torch::mul(z-v, z-v));
+    torch::Tensor policy_loss = torch::sum(torch::mul(pi, torch::log(p)));
+    torch::Tensor loss = value_loss + policy_loss;
+    return loss;
 }
 
 
@@ -98,85 +198,4 @@ torch::Tensor bitboard_plane(chess::bitboard bb)
     }
 
     return plane;
-}
-
-
-torch::Tensor encode_input(const chess::position& position, int repetitions)
-{
-    // todo: history as well (we need at least 2 to be able to play well with repetitions)
-    // - this can be done by instead encoding a game (which holds repetitions)
-    // - the sigmanet should take the value of T as a constructor parameter (decides how far back to look in the history)
-    // - this value should then be considered here to go back in the move history
-    // - will that work when we send replays?
-    // - all positions in the history will have to be flipped
-
-    const int planes = 21;
-    int i = 0;
-
-    torch::Tensor input = torch::empty({planes, 8, 8});
-
-    chess::side p1 = position.get_turn();
-    chess::side p2 = chess::opponent(p1);
-
-    bool flip = p1 == chess::side_black;
-
-    // p1 pieces
-    for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
-    {
-        chess::bitboard bb = position.get_board().piece_set(static_cast<chess::piece>(p), p1);
-        torch::Tensor plane = bitboard_plane(bb);
-        if(flip) plane = torch::flipud(plane);
-
-        using namespace torch::indexing;
-        input.index_put_({i++}, plane);
-    }
-
-    // p2 pieces
-    for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
-    {
-        chess::bitboard bb = position.get_board().piece_set(static_cast<chess::piece>(p), p2);
-        torch::Tensor plane = bitboard_plane(bb);
-        if(flip) plane = torch::flipud(plane);
-
-        using namespace torch::indexing;
-        input.index_put_({i++}, plane);
-    }
-
-    // repetitions
-    // TODO
-    if(repetitions >= 1)
-    {
-        input.index_put_({i}, torch::ones({8, 8}));
-    }
-    i++;
-
-    if(repetitions >= 2)
-    {
-        input.index_put_({i}, torch::ones({8, 8}));
-    }
-    i++;
-
-
-    // color
-    input.index_put_({i++}, static_cast<int>(p1));
-
-    // move count
-    input.index_put_({i++}, position.get_fullmove());
-
-    // white castle
-
-
-    // black castle
-
-    // no-progress count
-    input.index_put_({i++}, position.get_halfmove_clock())
-}
-
-
-torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p) {
-
-    torch::Tensor value_loss = torch::sum(torch::mul(z-v, z-v));
-    torch::Tensor policy_loss = torch::sum(torch::mul(pi, torch::log(p)));
-    torch::Tensor loss = value_loss + policy_loss;
-    return loss;
 }

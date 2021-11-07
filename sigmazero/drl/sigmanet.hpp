@@ -23,20 +23,33 @@ public:
 
 class sigmanet : public torch::nn::Module {
 
+    int history;
+    int channels;
+    int filters;
+    int blocks;
+
     torch::nn::Sequential input_conv = nullptr;
     torch::nn::Sequential residual = nullptr;
     torch::nn::Sequential value_head = nullptr;
     torch::nn::Sequential policy_head = nullptr;
 
+    static const int feature_planes = 6 + 6 + 2; // p1 piece, p2 piece, repetitions
+    static const int constant_planes = 1 + 1 + 2 + 2 + 1; // colour, total move count, p1 castling, p2 castling, no-progress count
+
 public:
 
-    sigmanet(int channels, int filters, int blocks);
+    sigmanet(int history = 8, int filters = 64, int blocks = 10);
 
     std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor x);
 
-    torch::Tensor encode_input(const chess::position& p);
+    torch::Tensor encode_input(const chess::game& g);
+
+private:
+
 };
 
 torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p);
+
+torch::Tensor bitboard_plane(chess::bitboard bb);
 
 #endif
