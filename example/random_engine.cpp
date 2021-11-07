@@ -91,7 +91,7 @@ uci::search_result random_engine::search(const uci::search_limit& limit, uci::se
 				// was mate accidentally found?
 				if(p.is_checkmate())
 				{
-					info.mate(p.fullmove() - root.fullmove());
+					info.mate(p.get_fullmove() - root.get_fullmove());
 
 					if(early_stop)
 					{

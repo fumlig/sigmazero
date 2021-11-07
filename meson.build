@@ -6,8 +6,25 @@ cpp_compiler = meson.get_compiler('cpp')
 thread_dep = dependency('threads')
 
 # libchess
+libchess_src = [
+	'libchess/chess/attack.cpp',
+	'libchess/chess/board.cpp',
+	'libchess/chess/chess.cpp',
+	'libchess/chess/direction.cpp',
+	'libchess/chess/game.cpp',
+	'libchess/chess/move.cpp',
+	'libchess/chess/piece.cpp',
+	'libchess/chess/position.cpp',
+	'libchess/chess/random.cpp',
+	'libchess/chess/set.cpp',
+	'libchess/chess/side.cpp',
+	'libchess/chess/square.cpp',
+	'libchess/chess/zobrist.cpp'
+]
+
 libchess_inc = include_directories('libchess')
-libchess_dep = declare_dependency(include_directories : libchess_inc)
+libchess_lib = library('libchess', libchess_src)
+libchess_dep = declare_dependency(link_with : libchess_lib, include_directories : libchess_inc)
 
 # handcrafted
 handcrafted_inc = include_directories('handcrafted/include')

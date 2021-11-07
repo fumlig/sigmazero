@@ -141,7 +141,7 @@ int Node::get_n() const
 std::string Node::to_string(int layers_left) const
 {
     std::string tree{};
-    tree += state.pieces().to_string();
+    tree += state.get_board().to_string();
 
     if(layers_left > 0) {
         tree += '\n' + "---children depth " + std::to_string(layers_left) + " ---\n";

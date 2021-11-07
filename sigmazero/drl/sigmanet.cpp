@@ -123,7 +123,7 @@ torch::Tensor encode_input(const chess::position& position, int repetitions)
     // p1 pieces
     for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
     {
-        chess::bitboard bb = position.pieces().piece_set(static_cast<chess::piece>(p), p1);
+        chess::bitboard bb = position.get_board().piece_set(static_cast<chess::piece>(p), p1);
         torch::Tensor plane = bitboard_plane(bb);
         if(flip) plane = torch::flipud(plane);
 
@@ -134,7 +134,7 @@ torch::Tensor encode_input(const chess::position& position, int repetitions)
     // p2 pieces
     for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
     {
-        chess::bitboard bb = position.pieces().piece_set(static_cast<chess::piece>(p), p2);
+        chess::bitboard bb = position.get_board().piece_set(static_cast<chess::piece>(p), p2);
         torch::Tensor plane = bitboard_plane(bb);
         if(flip) plane = torch::flipud(plane);
 
@@ -161,7 +161,7 @@ torch::Tensor encode_input(const chess::position& position, int repetitions)
     input.index_put_({i++}, static_cast<int>(p1));
 
     // move count
-    input.index_put_({i++}, position.fullmove());
+    input.index_put_({i++}, position.get_fullmove());
 
     // white castle
 
@@ -169,7 +169,7 @@ torch::Tensor encode_input(const chess::position& position, int repetitions)
     // black castle
 
     // no-progress count
-    input.index_put_({i++}, position)
+    input.index_put_({i++}, position.get_halfmove_clock())
 }
 
 
