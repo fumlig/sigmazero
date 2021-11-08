@@ -50,13 +50,11 @@ int main()
     torch::Tensor policy_targets = torch::rand({batch_size, n_moves}, device);
 
     std::cout << "randomised data" << std::endl;
-
-    
-
     
 
     model.to(device);
     model.train();
+
     // TODO: Move model to gpu if available?
 
     std::cout << "Training" << std::endl;
@@ -82,8 +80,16 @@ int main()
     std::cout << "Testing" << std::endl;
     // Inference
     model.eval();
-    torch::Tensor test_state = torch::rand({1, model.get_input_channels(), 8, 8}, device);
+
+    chess::init();
+    chess::game game;
+    //torch::Tensor input_state = model.encode_input(game).to(device);
+    game.push(game.get_position().moves().front());
+    torch::Tensor test_state = model.encode_input(game).to(device).unsqueeze(0);
     auto[value, policy] = model.forward(test_state);
+
+    std::cout << "input encoding:" << std::endl;
+    std::cout << test_state << std::endl;
 
     std::cout << "inference result: " << std::endl << "value: " << value << std::endl << "policy: " << policy << std::endl;
 
@@ -91,13 +97,6 @@ int main()
 
     std::cout << "saved model" << std::endl;
 
-    chess::init();
-    std::cout << "testing feature conversions" << std::endl;
-    chess::game game = chess::game();
-    // Does not compute std::cout << "position:" << std::endl << game.get_position().to_string() << std::endl;
-
-    torch::Tensor encoded = model.encode_input(game);
-
-    std::cout << "Encoded tensor:" << std::endl << encoded << std::endl;
+    
     
 }
