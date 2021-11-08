@@ -24,7 +24,7 @@ public:
 class sigmanet : public torch::nn::Module {
 
     int history;
-    int channels;
+    int in_channels;
     int filters;
     int blocks;
 
@@ -43,6 +43,8 @@ public:
     std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor x);
 
     torch::Tensor encode_input(const chess::game& g);
+
+    int get_input_channels() const;
 
 private:
 

@@ -27,7 +27,7 @@ int main()
         std::cout << "Using CPU" << std::endl;
     }
 
-    int in_channels = 64;
+    int filters = 64;
     int n_blocks = 10;
     double c = 0.0001; // L2 Regularization
     // Create dummy input data
@@ -36,21 +36,24 @@ int main()
     int n_moves = 8 * 8 * 73; // Change in sigmanet as well
 
     std::cout << "Initializing model with parameters" <<
-    "#input channels" << in_channels << std::endl <<
-    "#residual blocks" << n_blocks << std::endl <<
-    "history" << history << std::endl;
+    "#filters " << filters << std::endl <<
+    "#residual blocks " << n_blocks << std::endl <<
+    "history " << history << std::endl;
 
-    torch::Tensor input_state = torch::rand({batch_size, in_channels, 8, 8}, device);
+    // Initialize model loss and optimizer
+    sigmanet model(history, filters, n_blocks);
+    std::cout << "initialised model" << std::endl;
+
+    torch::Tensor input_state = torch::rand({batch_size, model.get_input_channels(), 8, 8}, device);
     // Create dummy output data
     torch::Tensor value_targets = torch::rand({batch_size, 1}, device);
     torch::Tensor policy_targets = torch::rand({batch_size, n_moves}, device);
 
     std::cout << "randomised data" << std::endl;
 
-    // Initialize model loss and optimizer
-    sigmanet model(history, in_channels, n_blocks);
+    
 
-    std::cout << "initialised model" << std::endl;
+    
 
     model.to(device);
     model.train();
@@ -79,7 +82,7 @@ int main()
     std::cout << "Testing" << std::endl;
     // Inference
     model.eval();
-    torch::Tensor test_state = torch::rand({1, in_channels, 8, 8}, device);
+    torch::Tensor test_state = torch::rand({1, model.get_input_channels(), 8, 8}, device);
     auto[value, policy] = model.forward(test_state);
 
     std::cout << "inference result: " << std::endl << "value: " << value << std::endl << "policy: " << policy << std::endl;
@@ -90,9 +93,11 @@ int main()
 
     chess::init();
     std::cout << "testing feature conversions" << std::endl;
-    chess::position pos_to_encode = chess::position::from_fen("r2qkbnr/1ppp1pp1/2n5/p3p1Qp/2bPP3/2PB4/PP3PPP/RNB1K1NR w KQkq - 0 1");
-    pos_to_encode.is_checkmate();
-    std::cout << "position:" << std::endl << pos_to_encode.to_string() << std::endl;
+    chess::game game = chess::game();
+    // Does not compute std::cout << "position:" << std::endl << game.get_position().to_string() << std::endl;
 
+    torch::Tensor encoded = model.encode_input(game);
 
+    std::cout << "Encoded tensor:" << std::endl << encoded << std::endl;
+    
 }
