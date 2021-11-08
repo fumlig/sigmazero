@@ -1,5 +1,7 @@
 #include <iostream>
 #include <chess/chess.hpp>
+#include <chess/position.hpp>
+#include <chess/board.hpp>
 #include "sigmanet.hpp"
 
 void save_model(sigmanet& net, const std::string& path) {
@@ -90,7 +92,7 @@ int main()
 
     std::cout << "testing feature conversions" << std::endl;
     chess::position pos_to_encode = chess::position::from_fen("r2qkbnr/1ppp1pp1/2n5/p3p1Qp/2bPP3/2PB4/PP3PPP/RNB1K1NR w KQkq - 0 1");
-    std::cout << "position:" << std::endl << pos_to_encode.to_string() << std::endl;
+    std::cout << "position:" << std::endl << pos_to_encode.get_board().to_string() << std::endl;
 
 
 }
