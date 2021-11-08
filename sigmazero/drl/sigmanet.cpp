@@ -88,7 +88,7 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
 torch::Tensor sigmanet::encode_input(const chess::game& g)
 {
     const int planes = in_channels;
-    torch::Tensor input = torch::empty({planes, 8, 8});
+    torch::Tensor input = torch::zeros({planes, 8, 8});
 
     int j = 0;
     const chess::position& p = g.get_position();
@@ -145,10 +145,7 @@ torch::Tensor sigmanet::encode_input(const chess::game& g)
         else
         {
             // fill with empty planes if no more positions in history
-            for(int k = 0; k < feature_planes; k++)
-            {
-                input.index_put_({j++}, torch::zeros({8, 8}));
-            }
+            j += feature_planes;
         }
     }
     
