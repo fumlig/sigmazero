@@ -95,14 +95,13 @@ example = executable(
 sigmazero_src = [
 	'sigmazero/main.cpp',
 	'sigmazero/drl/sigmanet.cpp',
-	'sigmazero/mcts/mcts_model.cpp',
+	'sigmazero/mcts/mcts.cpp',
 	'sigmazero/mcts/misc.cpp',
 	'sigmazero/mcts/node.cpp',
 	'sigmazero/mcts/misc.cpp',
 	'sigmazero/mcts/node.cpp',
-	'sigmazero/mcts/policy_handcrafted.cpp',
-	'sigmazero/mcts/policy.cpp',
-	'sigmazero/mcts/rollout.cpp',
+	'sigmazero/mcts/network.cpp',
+	'sigmazero/mcts/self_play.cpp'
 ]
 
 sigmazero = executable(
@@ -124,6 +123,24 @@ selfplay = executable(
 	['sigmazero/selfplay.cpp'],
 	dependencies : [libchess_dep, torch_dep],
 	cpp_pch : 'sigmazero/pch.hpp'
+)
+
+# sigmazero
+selfplay_src = [
+	'sigmazero/selfplay_dummy.cpp',
+	'sigmazero/mcts/mcts.cpp',
+	'sigmazero/mcts/misc.cpp',
+	'sigmazero/mcts/node.cpp',
+	'sigmazero/mcts/misc.cpp',
+	'sigmazero/mcts/node.cpp',
+	'sigmazero/mcts/network.cpp',
+	'sigmazero/mcts/self_play.cpp'
+]
+
+selfplay_dummy = executable(
+	'selfplay_dummy',
+	selfplay_src,
+	dependencies : [libchess_dep, handcrafted_dep]
 )
 
 sigmanet = executable(
