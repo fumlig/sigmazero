@@ -44,8 +44,6 @@ public:
 
     torch::Tensor encode_input(const chess::game& g);
 
-private:
-
 };
 
 torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p);

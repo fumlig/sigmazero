@@ -32,7 +32,7 @@ int main()
     double c = 0.0001; // L2 Regularization
     // Create dummy input data
     long batch_size = 64;
-    int history = 2;
+    int history = 8;
     int n_moves = 8 * 8 * 73; // Change in sigmanet as well
 
     chess::game game;
