@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <chess/chess.hpp>
 #include "sigmanet.hpp"
 
 void save_model(sigmanet& net, const std::string& path) {
@@ -15,15 +15,19 @@ Performs inference and asserts that output looks correct
 */
 int main()
 {
+    std::cout << "Testing sigmanet model..." << std::endl;
     torch::Device device(torch::kCPU);
     // Check cuda support
     if(torch::cuda::is_available())
     {
         device = torch::Device(torch::kCUDA);
-        std::cout << "CUDA is available - using it." << std::endl;
+        std::cout << "Using CUDA" << std::endl;
+    }
+    else {
+        std::cout << "Using CPU" << std::endl;
     }
 
-    int n_filters = 64;
+    int in_channels = 64;
     int n_blocks = 10;
     double c = 0.0001; // L2 Regularization
     // Create dummy input data
@@ -32,6 +36,10 @@ int main()
     int n_moves = 8 * 8 * 73; // Change in sigmanet as well
 
     chess::game game;
+    std::cout << "Initializing model with parameters" <<
+    "#input channels" << in_channels << std::endl <<
+    "#residual blocks" << n_blocks << std::endl <<
+    "history" << history << std::endl;
 
     // Create dummy output data
     torch::Tensor value_targets = torch::rand({batch_size, 1}, device);
@@ -40,7 +48,7 @@ int main()
     std::cout << "randomised data" << std::endl;
 
     // Initialize model loss and optimizer
-    sigmanet model(history, n_filters, n_blocks);
+    sigmanet model(history, in_channels, n_blocks);
 
     std::cout << "initialised model" << std::endl;
 
@@ -51,6 +59,7 @@ int main()
 
     // TODO: Move model to gpu if available?
 
+    std::cout << "Training" << std::endl;
     torch::optim::SGD optimizer(model.parameters(), 
     torch::optim::SGDOptions(0.01).momentum(0.9).weight_decay(c));
     auto loss_fn = sigma_loss; // Defined in model.h
@@ -70,7 +79,7 @@ int main()
         loss.backward();
         optimizer.step();
     }
-
+    std::cout << "Testing" << std::endl;
     // Inference
     model.eval();
 
@@ -83,5 +92,12 @@ int main()
     save_model(model, "test.pt");
 
     std::cout << "saved model" << std::endl;
+
+    chess::init();
+    std::cout << "testing feature conversions" << std::endl;
+    chess::position pos_to_encode = chess::position::from_fen("r2qkbnr/1ppp1pp1/2n5/p3p1Qp/2bPP3/2PB4/PP3PPP/RNB1K1NR w KQkq - 0 1");
+    pos_to_encode.is_checkmate();
+    std::cout << "position:" << std::endl << pos_to_encode.to_string() << std::endl;
+
 
 }

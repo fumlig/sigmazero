@@ -32,7 +32,7 @@ torch::Tensor residual_block::forward(torch::Tensor x) {
     return x;
 }
 
-sigmanet::sigmanet(int history, int filters, int blocks): history{history}, channels{history*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
+sigmanet::sigmanet(int history, int filters, int blocks) : history{history}, channels{history*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
 
     input_conv = torch::nn::Sequential(
         torch::nn::Conv2d(torch::nn::Conv2dOptions(channels, filters, 3).stride(1).padding(1)),
