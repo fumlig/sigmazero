@@ -32,10 +32,10 @@ torch::Tensor residual_block::forward(torch::Tensor x) {
     return x;
 }
 
-sigmanet::sigmanet(int history, int filters, int blocks) : history{history}, channels{history*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
+sigmanet::sigmanet(int history, int filters, int blocks) : history{history}, in_channels{history*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
 
     input_conv = torch::nn::Sequential(
-        torch::nn::Conv2d(torch::nn::Conv2dOptions(channels, filters, 3).stride(1).padding(1)),
+        torch::nn::Conv2d(torch::nn::Conv2dOptions(in_channels, filters, 3).stride(1).padding(1)),
         torch::nn::BatchNorm2d(filters),
         torch::nn::ReLU()
     );
@@ -87,7 +87,9 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
 
 torch::Tensor sigmanet::encode_input(const chess::game& g)
 {
-    const int planes = channels;
+    using namespace torch::indexing;
+
+    const int planes = in_channels;
     torch::Tensor input = torch::empty({planes, 8, 8});
 
     int j = 0;
@@ -100,56 +102,43 @@ torch::Tensor sigmanet::encode_input(const chess::game& g)
     // feature planes
     bool flip = p1 == chess::side_black;
 
-    for(int i = 0; i < history; i++)
+    for(int i = 0; i < max(history, h.size()+1); i++)
     {
-        if(!h.empty())
+        // p1 pieces
+        for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
         {
-            // p1 pieces
-            for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
-            {
-                chess::bitboard bb = h.get_position().get_board().piece_set(static_cast<chess::piece>(p), p1);
-                torch::Tensor plane = bitboard_plane(bb);
-                if(flip) plane = torch::flipud(plane);
+            chess::bitboard bb = h.get_position().get_board().piece_set(static_cast<chess::piece>(p), p1);
+            torch::Tensor plane = bitboard_plane(bb);
+            if(flip) plane = torch::flipud(plane);
 
-                using namespace torch::indexing;
-                input.index_put_({j++}, plane);
-            }
-
-            // p2 pieces
-            for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
-            {
-                chess::bitboard bb = h.get_position().get_board().piece_set(static_cast<chess::piece>(p), p2);
-                torch::Tensor plane = bitboard_plane(bb);
-                if(flip) plane = torch::flipud(plane);
-
-                using namespace torch::indexing;
-                input.index_put_({j++}, plane);
-            }
-
-            // repetitions
-            int repetitions = h.get_repetitions();
-
-            if(repetitions >= 1)
-            {
-                input.index_put_({j}, torch::ones({8, 8}));
-            } j++;
-
-            if(repetitions >= 2)
-            {
-                input.index_put_({j}, torch::ones({8, 8}));
-            } j++;
-
-            // previous position
-            h.pop();
+            input.index_put_({j++}, plane);
         }
-        else
+
+        // p2 pieces
+        for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
         {
-            // fill with empty planes if no more positions in history
-            for(int k = 0; k < feature_planes; k++)
-            {
-                input.index_put_({j++}, torch::zeros({8, 8}));
-            }
+            chess::bitboard bb = h.get_position().get_board().piece_set(static_cast<chess::piece>(p), p2);
+            torch::Tensor plane = bitboard_plane(bb);
+            if(flip) plane = torch::flipud(plane);
+
+            input.index_put_({j++}, plane);
         }
+
+        // repetitions
+        int repetitions = h.get_repetitions();
+
+        if(repetitions >= 1)
+        {
+            input.index_put_({j}, torch::ones({8, 8}));
+        } j++;
+
+        if(repetitions >= 2)
+        {
+            input.index_put_({j}, torch::ones({8, 8}));
+        } j++;
+
+        // previous position
+        h.pop();
     }
     
     // constant planes
@@ -174,6 +163,10 @@ torch::Tensor sigmanet::encode_input(const chess::game& g)
     return input;
 }
 
+int sigmanet::get_input_channels() const
+{
+    return in_channels;
+}
 
 torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p) {
 
@@ -199,3 +192,5 @@ torch::Tensor bitboard_plane(chess::bitboard bb)
 
     return plane;
 }
+
+

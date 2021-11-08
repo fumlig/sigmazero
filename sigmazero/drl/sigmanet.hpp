@@ -24,7 +24,7 @@ public:
 class sigmanet : public torch::nn::Module {
 
     int history;
-    int channels;
+    int in_channels;
     int filters;
     int blocks;
 
@@ -44,6 +44,7 @@ public:
 
     torch::Tensor encode_input(const chess::game& g);
 
+    int get_input_channels() const;
 };
 
 torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p);

@@ -27,7 +27,7 @@ int main()
         std::cout << "Using CPU" << std::endl;
     }
 
-    int in_channels = 64;
+    int filters = 64;
     int n_blocks = 10;
     double c = 0.0001; // L2 Regularization
     // Create dummy input data
@@ -35,27 +35,25 @@ int main()
     int history = 8;
     int n_moves = 8 * 8 * 73; // Change in sigmanet as well
 
-    chess::game game;
     std::cout << "Initializing model with parameters" <<
-    "#input channels" << in_channels << std::endl <<
-    "#residual blocks" << n_blocks << std::endl <<
-    "history" << history << std::endl;
+    "#filters " << filters << std::endl <<
+    "#residual blocks " << n_blocks << std::endl <<
+    "history " << history << std::endl;
 
+    // Initialize model loss and optimizer
+    sigmanet model(history, filters, n_blocks);
+    std::cout << "initialised model" << std::endl;
+
+    torch::Tensor input_state = torch::rand({batch_size, model.get_input_channels(), 8, 8}, device);
     // Create dummy output data
     torch::Tensor value_targets = torch::rand({batch_size, 1}, device);
     torch::Tensor policy_targets = torch::rand({batch_size, n_moves}, device);
 
     std::cout << "randomised data" << std::endl;
-
-    // Initialize model loss and optimizer
-    sigmanet model(history, in_channels, n_blocks);
-
-    std::cout << "initialised model" << std::endl;
+    
 
     model.to(device);
     model.train();
-
-    torch::Tensor input_state = model.encode_input(game).to(device);
 
     // TODO: Move model to gpu if available?
 
@@ -83,9 +81,15 @@ int main()
     // Inference
     model.eval();
 
+    chess::init();
+    chess::game game;
+    //torch::Tensor input_state = model.encode_input(game).to(device);
     game.push(game.get_position().moves().front());
-    torch::Tensor test_state = model.encode_input(game).to(device);
+    torch::Tensor test_state = model.encode_input(game).to(device).unsqueeze(0);
     auto[value, policy] = model.forward(test_state);
+
+    std::cout << "input encoding:" << std::endl;
+    std::cout << test_state << std::endl;
 
     std::cout << "inference result: " << std::endl << "value: " << value << std::endl << "policy: " << policy << std::endl;
 
@@ -93,11 +97,6 @@ int main()
 
     std::cout << "saved model" << std::endl;
 
-    chess::init();
-    std::cout << "testing feature conversions" << std::endl;
-    chess::position pos_to_encode = chess::position::from_fen("r2qkbnr/1ppp1pp1/2n5/p3p1Qp/2bPP3/2PB4/PP3PPP/RNB1K1NR w KQkq - 0 1");
-    pos_to_encode.is_checkmate();
-    std::cout << "position:" << std::endl << pos_to_encode.to_string() << std::endl;
-
-
+    
+    
 }
