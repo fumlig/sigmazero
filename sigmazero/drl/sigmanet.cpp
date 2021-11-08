@@ -98,6 +98,7 @@ torch::Tensor sigmanet::encode_input(const chess::game& g)
 
     int j = 0;
     const chess::position& p = g.get_position();
+
     chess::game h = g;
 
     chess::side p1 = p.get_turn();
@@ -105,8 +106,9 @@ torch::Tensor sigmanet::encode_input(const chess::game& g)
 
     // feature planes
     bool flip = p1 == chess::side_black;
-
-    for(int i = 0; i < std::max(static_cast<std::size_t>(history), h.size()+1); i++)
+    int n = std::min(history, static_cast<int>(h.size()+1));
+    
+    for(int i = 0; i < n; i++)
     {
         // p1 pieces
         for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
@@ -141,10 +143,15 @@ torch::Tensor sigmanet::encode_input(const chess::game& g)
             input.index_put_({j}, torch::ones({8, 8}));
         } j++;
 
-        // previous position
-        h.pop();
+        // previous position (if not at initial, in which case the loop will end)
+        if(!h.empty())
+        {
+            h.pop();
+        }
     }
-    
+
+    j = feature_planes*history;
+
     // constant planes
 
     // color

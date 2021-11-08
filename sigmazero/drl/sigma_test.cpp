@@ -32,7 +32,7 @@ int main()
     double c = 0.0001; // L2 Regularization
     // Create dummy input data
     long batch_size = 64;
-    int history = 8;
+    int history = 3;
     int n_moves = 8 * 8 * 73; // Change in sigmanet as well
 
     std::cout << "Initializing model with parameters" <<
@@ -82,14 +82,14 @@ int main()
     model.eval();
 
     chess::init();
+    
     chess::game game;
-    //torch::Tensor input_state = model.encode_input(game).to(device);
     game.push(game.get_position().moves().front());
     torch::Tensor test_state = model.encode_input(game).to(device).unsqueeze(0);
     auto[value, policy] = model.forward(test_state);
 
     std::cout << "input encoding:" << std::endl;
-    std::cout << test_state << std::endl;
+    std::cout << model.encode_input(game) << std::endl;
 
     std::cout << "inference result: " << std::endl << "value: " << value << std::endl << "policy: " << policy << std::endl;
 
