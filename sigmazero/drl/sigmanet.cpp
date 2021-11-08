@@ -85,7 +85,7 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
 }
 
 
-torch::Tensor encode_input(const chess::game& g)
+torch::Tensor sigmanet::encode_input(const chess::game& g)
 {
     const int planes = channels;
     torch::Tensor input = torch::empty({planes, 8, 8});
@@ -145,9 +145,9 @@ torch::Tensor encode_input(const chess::game& g)
         else
         {
             // fill with empty planes if no more positions in history
-            for(int k = 0; k < feature_planes; j++)
+            for(int k = 0; k < feature_planes; k++)
             {
-                input.index_put({j++}, torch::zeros({8, 8}));
+                input.index_put_({j++}, torch::zeros({8, 8}));
             }
         }
     }
@@ -161,15 +161,15 @@ torch::Tensor encode_input(const chess::game& g)
     input.index_put_({j++}, p.get_fullmove());
 
     // p1 castling
-    input.index_put({j++}, p.can_castle_kingside(p1))
-    input.index_put({j++}, p.can_castle_queenside(p1))
+    input.index_put_({j++}, p.can_castle_kingside(p1));
+    input.index_put_({j++}, p.can_castle_queenside(p1));
 
     // p2 castling
-    input.index_put({j++}, p.can_castle_kingside(p2))
-    input.index_put({j++}, p.can_castle_queenside(p2))
+    input.index_put_({j++}, p.can_castle_kingside(p2));
+    input.index_put_({j++}, p.can_castle_queenside(p2));
 
     // no-progress count
-    input.index_put_({j++}, position.get_halfmove_clock())
+    input.index_put_({j++}, p.get_halfmove_clock());
 
     return input;
 }

@@ -31,8 +31,8 @@ int main()
     int history = 2;
     int n_moves = 8 * 8 * 73; // Change in sigmanet as well
 
+    chess::game game;
 
-    torch::Tensor input_state = torch::rand({batch_size, in_channels, 8, 8}, device);
     // Create dummy output data
     torch::Tensor value_targets = torch::rand({batch_size, 1}, device);
     torch::Tensor policy_targets = torch::rand({batch_size, n_moves}, device);
@@ -46,6 +46,9 @@ int main()
 
     model.to(device);
     model.train();
+
+    torch::Tensor input_state = model.encode_input(game).to(device);
+
     // TODO: Move model to gpu if available?
 
     torch::optim::SGD optimizer(model.parameters(), 
@@ -70,7 +73,9 @@ int main()
 
     // Inference
     model.eval();
-    torch::Tensor test_state = torch::rand({1, in_channels, 8, 8}, device);
+
+    game.push(game.get_position().moves().front());
+    torch::Tensor test_state = model.encode_input(game).to(device);
     auto[value, policy] = model.forward(test_state);
 
     std::cout << "inference result: " << std::endl << "value: " << value << std::endl << "policy: " << policy << std::endl;
