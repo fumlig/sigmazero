@@ -1,4 +1,8 @@
+#include <algorithm>
+#include <cstdint>
+
 #include "sigmanet.hpp"
+
 
 residual_block::residual_block(int filters) {
 
@@ -90,7 +94,7 @@ torch::Tensor sigmanet::encode_input(const chess::game& g)
     using namespace torch::indexing;
 
     const int planes = in_channels;
-    torch::Tensor input = torch::empty({planes, 8, 8});
+    torch::Tensor input = torch::zeros({planes, 8, 8});
 
     int j = 0;
     const chess::position& p = g.get_position();
@@ -102,7 +106,7 @@ torch::Tensor sigmanet::encode_input(const chess::game& g)
     // feature planes
     bool flip = p1 == chess::side_black;
 
-    for(int i = 0; i < max(history, h.size()+1); i++)
+    for(int i = 0; i < std::max(static_cast<std::size_t>(history), h.size()+1); i++)
     {
         // p1 pieces
         for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
