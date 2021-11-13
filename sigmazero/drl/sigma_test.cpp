@@ -85,11 +85,11 @@ int main()
     
     chess::game game;
     game.push(game.get_position().moves().front());
-    torch::Tensor test_state = model.encode_input(game).to(device).unsqueeze(0);
+    torch::Tensor test_state = model.encode_input(game.get_position()).to(device).unsqueeze(0);
     auto[value, policy] = model.forward(test_state);
 
     std::cout << "input encoding:" << std::endl;
-    std::cout << model.encode_input(game) << std::endl;
+    std::cout << model.encode_input(game.get_position()) << std::endl;
 
     std::cout << "inference result: " << std::endl << "value: " << value << std::endl << "policy: " << policy << std::endl;
 
