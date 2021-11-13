@@ -7,28 +7,23 @@ thread_dep = dependency('threads')
 
 # libchess
 libchess_src = [
-	'libchess/chess/attack.cpp',
-	'libchess/chess/board.cpp',
-	'libchess/chess/chess.cpp',
-	'libchess/chess/direction.cpp',
-	'libchess/chess/game.cpp',
-	'libchess/chess/move.cpp',
-	'libchess/chess/piece.cpp',
-	'libchess/chess/position.cpp',
-	'libchess/chess/random.cpp',
-	'libchess/chess/set.cpp',
-	'libchess/chess/side.cpp',
-	'libchess/chess/square.cpp',
-	'libchess/chess/zobrist.cpp'
+    'libchess/chess/attack.cpp',
+    'libchess/chess/board.cpp',
+    'libchess/chess/chess.cpp',
+    'libchess/chess/direction.cpp',
+    'libchess/chess/game.cpp',
+    'libchess/chess/move.cpp',
+    'libchess/chess/piece.cpp',
+    'libchess/chess/position.cpp',
+    'libchess/chess/random.cpp',
+    'libchess/chess/set.cpp',
+    'libchess/chess/side.cpp',
+    'libchess/chess/square.cpp',
+    'libchess/chess/zobrist.cpp'
 ]
 
 libchess_inc = include_directories('libchess')
-libchess_lib = library('libchess', libchess_src)
-libchess_dep = declare_dependency(link_with : libchess_lib, include_directories : libchess_inc)
-
-# handcrafted
-handcrafted_inc = include_directories('handcrafted/include')
-handcrafted_dep = declare_dependency(include_directories : handcrafted_inc)
+libchess_dep = declare_dependency(sources : libchess_src, include_directories : libchess_inc)
 
 # libtorch
 py_mod = import('python')
@@ -76,6 +71,7 @@ common_src = [
 	'common/output_thread.cpp'
 ]
 
+
 common_inc = include_directories('common')
 
 # example
@@ -93,22 +89,20 @@ example = executable(
 
 # sigmazero
 sigmazero_src = [
-	'sigmazero/main.cpp',
+	'sigmazero/test_drive.cpp',
 	'sigmazero/drl/sigmanet.cpp',
+	'sigmazero/drl/action_encodings.cpp',
 	'sigmazero/mcts/mcts.cpp',
-	'sigmazero/mcts/misc.cpp',
 	'sigmazero/mcts/node.cpp',
-	'sigmazero/mcts/misc.cpp',
-	'sigmazero/mcts/node.cpp',
-	'sigmazero/mcts/network.cpp',
 	'sigmazero/mcts/self_play.cpp'
 ]
+
 
 sigmazero = executable(
 	'sigmazero',
 	common_src + sigmazero_src,
 	include_directories : [common_inc],
-	dependencies : [libchess_dep, thread_dep, torch_dep, handcrafted_dep]
+	dependencies : [libchess_dep, thread_dep, torch_dep]
 )
 
 training = executable(
@@ -128,20 +122,11 @@ selfplay = executable(
 # sigmazero
 selfplay_src = [
 	'sigmazero/selfplay_dummy.cpp',
-	'sigmazero/mcts/mcts.cpp',
 	'sigmazero/mcts/misc.cpp',
 	'sigmazero/mcts/node.cpp',
-	'sigmazero/mcts/misc.cpp',
 	'sigmazero/mcts/node.cpp',
-	'sigmazero/mcts/network.cpp',
 	'sigmazero/mcts/self_play.cpp'
 ]
-
-selfplay_dummy = executable(
-	'selfplay_dummy',
-	selfplay_src,
-	dependencies : [libchess_dep, handcrafted_dep]
-)
 
 sigmanet = executable(
 	'sigmanet',

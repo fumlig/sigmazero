@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <cstdint>
-
+#include <cmath>
+#include <chess/chess.hpp>
+#include <iostream>
+#include "action_encodings.hpp"
 #include "sigmanet.hpp"
-
 
 residual_block::residual_block(int filters) {
 
@@ -35,8 +37,8 @@ torch::Tensor residual_block::forward(torch::Tensor x) {
 
     return x;
 }
-
-sigmanet::sigmanet(int history, int filters, int blocks) : history{history}, in_channels{history*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
+// History unused currently
+sigmanet::sigmanet(int history, int filters, int blocks) : history{history}, in_channels{1*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
 
     input_conv = torch::nn::Sequential(
         torch::nn::Conv2d(torch::nn::Conv2dOptions(in_channels, filters, 3).stride(1).padding(1)),
@@ -88,69 +90,73 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
     return std::make_pair(value, policy);
 }
 
+// Assumes that model is in eval mode
+//TODO: Hash chess::move???????
+std::pair<double, std::unordered_map<size_t, double>> sigmanet::evaluate(const chess::position& p)
+{
+    auto[value, policy_logits] = forward(encode_input(p).unsqueeze(0));
+    // policy now is a 4672x1 tensor of logits
+    // Value is a 1x1 tensor of a policy
+    return decode_output(policy_logits, value, p);
+    // !IMPORTANT: when passing values to network, pass according to player side
+}
 
-torch::Tensor sigmanet::encode_input(const chess::game& g)
+std::pair<double, std::unordered_map<size_t, double>> sigmanet::decode_output(const torch::Tensor& policy, torch::Tensor value, const chess::position& p) const {
+    return std::make_pair(value.item<double>(), valid_policy_probabilities(policy, p));
+}
+
+std::unordered_map<size_t, double> sigmanet::valid_policy_probabilities(const torch::Tensor& policy_logits, const chess::position& state) const {
+        
+    // Softmax legal moves
+    std::unordered_map<size_t, double> policy_probabilities;
+    std::vector<chess::move> legal_moves{state.moves()};
+    double exp_sum = 0.0;
+    for (chess::move move: legal_moves) {
+        size_t a = action_encodings::action_from_move(move);
+        double value = policy_logits[0][a].item<double>();
+        policy_probabilities[a] = std::exp(value);
+        exp_sum += policy_probabilities[a];
+    }
+    // Normalize
+    for (auto& kv: policy_probabilities) {
+        kv.second /= exp_sum; 
+    }
+
+    return policy_probabilities;
+};
+
+torch::Tensor sigmanet::encode_input(const chess::position& pos) const
 {
     using namespace torch::indexing;
 
-    const int planes = in_channels;
+    const int planes = 12+7;
     torch::Tensor input = torch::zeros({planes, 8, 8});
 
     int j = 0;
-    const chess::position& p = g.get_position();
-
-    chess::game h = g;
-
-    chess::side p1 = p.get_turn();
+    chess::side p1 = pos.get_turn();
     chess::side p2 = chess::opponent(p1);
 
     // feature planes
     bool flip = p1 == chess::side_black;
-    int n = std::min(history, static_cast<int>(h.size()+1));
-    
-    for(int i = 0; i < n; i++)
+    // p1 pieces
+    for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
     {
-        // p1 pieces
-        for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
-        {
-            chess::bitboard bb = h.get_position().get_board().piece_set(static_cast<chess::piece>(p), p1);
-            torch::Tensor plane = bitboard_plane(bb);
-            if(flip) plane = torch::flipud(plane);
+        chess::bitboard bb = pos.get_board().piece_set(static_cast<chess::piece>(p), p1);
+        torch::Tensor plane = bitboard_plane(bb);
+        if(flip) plane = torch::flipud(plane);
 
-            input.index_put_({j++}, plane);
-        }
-
-        // p2 pieces
-        for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
-        {
-            chess::bitboard bb = h.get_position().get_board().piece_set(static_cast<chess::piece>(p), p2);
-            torch::Tensor plane = bitboard_plane(bb);
-            if(flip) plane = torch::flipud(plane);
-
-            input.index_put_({j++}, plane);
-        }
-
-        // repetitions
-        int repetitions = h.get_repetitions();
-
-        if(repetitions >= 1)
-        {
-            input.index_put_({j}, torch::ones({8, 8}));
-        } j++;
-
-        if(repetitions >= 2)
-        {
-            input.index_put_({j}, torch::ones({8, 8}));
-        } j++;
-
-        // previous position (if not at initial, in which case the loop will end)
-        if(!h.empty())
-        {
-            h.pop();
-        }
+        input.index_put_({j++}, plane);
     }
 
-    j = feature_planes*history;
+    // p2 pieces
+    for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
+    {
+        chess::bitboard bb = pos.get_board().piece_set(static_cast<chess::piece>(p), p2);
+        torch::Tensor plane = bitboard_plane(bb);
+        if(flip) plane = torch::flipud(plane);
+
+        input.index_put_({j++}, plane);
+    }
 
     // constant planes
 
@@ -158,20 +164,21 @@ torch::Tensor sigmanet::encode_input(const chess::game& g)
     input.index_put_({j++}, static_cast<int>(p1));
 
     // move count
-    input.index_put_({j++}, p.get_fullmove());
+    input.index_put_({j++}, pos.get_fullmove());
 
     // p1 castling
-    input.index_put_({j++}, p.can_castle_kingside(p1));
-    input.index_put_({j++}, p.can_castle_queenside(p1));
+    input.index_put_({j++}, pos.can_castle_kingside(p1));
+    input.index_put_({j++}, pos.can_castle_queenside(p1));
 
     // p2 castling
-    input.index_put_({j++}, p.can_castle_kingside(p2));
-    input.index_put_({j++}, p.can_castle_queenside(p2));
+    input.index_put_({j++}, pos.can_castle_kingside(p2));
+    input.index_put_({j++}, pos.can_castle_queenside(p2));
 
     // no-progress count
-    input.index_put_({j++}, p.get_halfmove_clock());
+    input.index_put_({j++}, pos.get_halfmove_clock());
 
     return input;
+
 }
 
 int sigmanet::get_input_channels() const
@@ -203,5 +210,3 @@ torch::Tensor bitboard_plane(chess::bitboard bb)
 
     return plane;
 }
-
-
