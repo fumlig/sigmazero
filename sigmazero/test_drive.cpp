@@ -37,26 +37,19 @@ int main()
 
     for(int i = 0 ; i < 1000 ; ++i)
     {
-        std::cout << "traversing...";
         std::shared_ptr<mcts::Node> current_node = main_node->traverse();
-        std::cout << "traversed. Is over?";
         if(current_node->is_over()) {
-            std::cout << "Yes. Backpropagating:";
             current_node->backpropagate(current_node->get_terminal_value());
-            std::cout << "Done. Next iter:" << std::endl;
             continue;
         }
         std::cout << "iteration i=" << i << ", evaluating...";
         evaluation = network.evaluate(current_node->get_state());
-        std::cout << "evaluated. Explore and set priors:";
         current_node->explore_and_set_priors(evaluation);
-        std::cout << "Done. Next iter:" << std::endl;
     }
 
     std::cout << "search done. Evaluation of current position:" << std::endl;
     print_evaluation(evaluation);
     std::cout << "estimated best move: " << main_node->best_move().to_lan() << std::endl;
-
 
     return 0;
 }
