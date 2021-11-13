@@ -105,6 +105,7 @@ chess::move action_encodings::move_from_action(const chess::position& state, siz
     if (!encoding_initialized) {
         initialize_encoding_map();
     }
+    if(action_idx > std::size(actions)) std::cerr << "ERROR: Action index does not exist.";
     Action action = actions[action_idx];
     chess::square from = static_cast<chess::square>(action.pos);
     size_t x = action.pos % 8;

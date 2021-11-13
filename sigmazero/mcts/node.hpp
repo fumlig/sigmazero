@@ -7,6 +7,7 @@
 #include <vector>
 #include <float.h>
 #include <memory>
+#include <random>
 
 namespace mcts
 {    
@@ -26,7 +27,7 @@ class Node : public std::enable_shared_from_this<Node>
         // Expand node
         void expand(const std::unordered_map<size_t, double>& action_probabilities);
         void explore_and_set_priors(const std::pair<double, std::unordered_map<size_t, double>>& evaluation);
-        void add_exploration_noise(double dirichlet_alpha, double exploration_factor);
+        void add_exploration_noise(double dirichlet_alpha, double exploration_factor, std::default_random_engine generator);
         double get_value() const;
         double get_terminal_value() const;
 

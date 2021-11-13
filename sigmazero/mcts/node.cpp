@@ -97,9 +97,8 @@ namespace mcts
         backpropagate(evaluation.first);
     }
 
-    void Node::add_exploration_noise(double dirichlet_alpha, double exploration_factor)
+    void Node::add_exploration_noise(double dirichlet_alpha, double exploration_factor, std::default_random_engine generator)
     {
-        std::default_random_engine generator;
         std::gamma_distribution<double> gamma_distribution(dirichlet_alpha, 1.0);
         for (std::shared_ptr<Node> child : children)
         {
@@ -116,7 +115,10 @@ namespace mcts
         {
             UCB1_scores.push_back(child->is_terminal_node ? 0.0 : child->UCB1());
         }
-
+        if(UCB1_scores.size() == 0) { // Needs to be here, otherwise segmentation fault
+            is_terminal_node = true;
+            return parent.lock() ? parent.lock()->traverse() : shared_from_this();
+        }
         std::shared_ptr<Node> best_child = get_max_element<std::shared_ptr<Node>>(children.begin(), UCB1_scores.begin(), UCB1_scores.end());
 
         if (best_child->children.size() > 0)
