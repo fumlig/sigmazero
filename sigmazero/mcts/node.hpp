@@ -1,7 +1,7 @@
 #ifndef NODE_H
 #define NODE_H
 
-#include "network.hpp"
+#include <sigmazero/drl/action_encodings.hpp>
 #include <chess/chess.hpp>
 #include "misc.hpp"
 #include <vector>
@@ -25,7 +25,7 @@ class Node : public std::enable_shared_from_this<Node>
         void backpropagate(double value);
         // Expand node
         void expand(const std::unordered_map<size_t, double>& action_probabilities);
-        void explore_and_set_priors(const Network &network);
+        void explore_and_set_priors(const std::pair<double, std::unordered_map<size_t, double>>& evaluation);
         void add_exploration_noise(double dirichlet_alpha, double exploration_factor);
         double get_value() const;
         double get_terminal_value() const;
@@ -50,8 +50,7 @@ class Node : public std::enable_shared_from_this<Node>
         bool is_over() const;
         // Get amount of vists
         int get_n() const;
-        // Print the main node and its children
-        std::string to_string(int layers_left=1) const;
+
 
         static double WIN_SCORE;
         static double DRAW_SCORE;
@@ -70,6 +69,7 @@ class Node : public std::enable_shared_from_this<Node>
         chess::move move;
 
         std::vector<std::shared_ptr<Node>> children;
+        //std::map<chess::move, std::shared_ptr<Node>>
         double prior;
         size_t action;
 };
