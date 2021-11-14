@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 			torch::Tensor value = torch::zeros(1);
 			torch::Tensor policy = torch::zeros(20);
 
-			// save in replay
+			// send game image
 			images.push_back(image);
 			values.push_back(value);
 			policies.push_back(policy);
@@ -92,6 +92,7 @@ int main(int argc, char** argv)
 		torch::Tensor replay_values = torch::stack(values);
 		torch::Tensor replay_policies = torch::stack(policies);
 
+		// this has to be synchronized
 		std::cout << encode(replay_images) << ' ' << encode(replay_values) << ' ' << encode(replay_policies) << std::endl;
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));

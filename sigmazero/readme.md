@@ -15,17 +15,23 @@ A training process should read replays from standard in, line by line. It should
 
 ## Running
 
-To run locally:
+Run one selfplayer and one trainer:
 
-```sh
-# path to store model at
+```bash
 MODEL=model.pt
-
-# one selfplayer, one trainer
 ./selfplay $MODEL | ./training $MODEL
+```
 
-# three selfplayers, one trainer
-{./selfplay $MODEL & ./selfplay $MODEL & ./selfplay $MODEL} | ./training $MODEL
+Run multiple selfplayers and one trainer:
+
+```bash
+MODEL=model.pt
+REPLAYS=replays.fifo
+WORKERS=5
+
+mkfifo $REPLAYS
+for i in {1..$WORKERS}; do ./selfplay $MODEL >> $REPLAYS &; done
+./training $MODEL < $REPLAYS
 ```
 
 The training process will save its latest model as *model.pt* and receive replays from the selfplay process, which plays with the lastest model.

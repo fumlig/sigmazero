@@ -68,18 +68,25 @@ int main(int argc, char** argv)
 
 	std::future<std::string> replay_future = std::async(readline, std::ref(std::cin));
 
+	// statistics
+	unsigned long long received = 0;
+	unsigned long long consumed = 0;
+
 	while(true)
 	{
 		while(replay_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 		{
 			std::string replay_encoding = replay_future.get();
+			std::cerr << "replay bytes: " << replay_encoding.size() << std::endl;
 
 			std::string encoded_images, encoded_values, encoded_policies;
 			std::istringstream(replay_encoding) >> encoded_images >> encoded_values >> encoded_policies;
 			window.emplace_back(decode(encoded_images), decode(encoded_values), decode(encoded_policies));
-			
-			//std::cerr << "replay received of size " << std::get<0>(window.back()).size(0) << std::endl;
+
+			std::cerr << "replay received of size " << std::get<0>(window.back()).size(0) << std::endl;
 			replay_future = std::async(readline, std::ref(std::cin));
+
+			received++;
 		}
 
 		// erase replays outside window
@@ -116,11 +123,15 @@ int main(int argc, char** argv)
 			std::uniform_int_distribution<std::size_t> index_distribution(0, weights.at(replay)-1);
 			std::size_t index = index_distribution(generator);
 
+			//std::cerr << "sampling replay " << replay << ", index " << index << std::endl;
+
     		using namespace torch::indexing;
 
 			sample_images.push_back(std::get<0>(window.at(replay)).index({static_cast<int>(index)}));
 			sample_values.push_back(std::get<1>(window.at(replay)).index({static_cast<int>(index)}));
 			sample_policies.push_back(std::get<2>(window.at(replay)).index({static_cast<int>(index)}));
+
+			consumed++;
 		}
 
 		torch::Tensor batch_images = torch::stack(sample_images);
@@ -134,8 +145,11 @@ int main(int argc, char** argv)
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 		// update model
-		torch::save(model, model_path);
+		//torch::save(model, model_path);
 		std::cout << std::endl; // indicate that model has updated
+
+		// show statistics
+		std::cerr << "received: " << received << ", consumed: " << consumed << std::endl;
 	}
 
 	return 0;
