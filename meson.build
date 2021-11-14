@@ -23,8 +23,7 @@ libchess_src = [
 ]
 
 libchess_inc = include_directories('libchess')
-libchess_lib = library('libchess', libchess_src)
-libchess_dep = declare_dependency(link_with : libchess_lib, include_directories : libchess_inc)
+libchess_dep = declare_dependency(sources : libchess_src, include_directories : libchess_inc)
 
 # handcrafted
 handcrafted_inc = include_directories('handcrafted/include')
@@ -77,6 +76,7 @@ common_src = [
 ]
 
 common_inc = include_directories('common')
+common_dep = declare_dependency(sources : common_src, include_directories : common_inc)
 
 # example
 example_src = [
@@ -86,9 +86,8 @@ example_src = [
 
 example = executable(
 	'example',
-	common_src + example_src,
-	include_directories : [common_inc],
-	dependencies : [libchess_dep, thread_dep, torch_dep]
+	example_src,
+	dependencies : [libchess_dep, common_dep, thread_dep, torch_dep]
 )
 
 # sigmazero
@@ -106,23 +105,20 @@ sigmazero_src = [
 
 sigmazero = executable(
 	'sigmazero',
-	common_src + sigmazero_src,
-	include_directories : [common_inc],
-	dependencies : [libchess_dep, thread_dep, torch_dep, handcrafted_dep]
+	sigmazero_src,
+	dependencies : [libchess_dep, common_dep, thread_dep, torch_dep, handcrafted_dep]
 )
 
 training = executable(
 	'training',
-	['sigmazero/training.cpp'],
-	dependencies : [libchess_dep, torch_dep],
-	cpp_pch : 'sigmazero/pch.hpp'
+	['sigmazero/training.cpp', 'sigmazero/base64.cpp'],
+	dependencies : [libchess_dep, torch_dep]
 )
 
 selfplay = executable(
 	'selfplay',
-	['sigmazero/selfplay.cpp'],
-	dependencies : [libchess_dep, torch_dep],
-	cpp_pch : 'sigmazero/pch.hpp'
+	['sigmazero/selfplay.cpp', 'sigmazero/base64.cpp'],
+	dependencies : [libchess_dep, torch_dep]
 )
 
 # sigmazero
@@ -149,6 +145,5 @@ sigmanet = executable(
 		'sigmazero/drl/sigmanet.cpp',
 		'sigmazero/drl/sigma_test.cpp'
 	],
-	dependencies : [libchess_dep, torch_dep],
-	cpp_pch : 'sigmazero/pch.hpp'
+	dependencies : [libchess_dep, torch_dep]
 )

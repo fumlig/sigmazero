@@ -25,8 +25,6 @@ int main(int argc, char** argv)
   	std::cerr << tensor << std::endl;
 	std::cerr << torch::flipud(tensor) << std::endl;
 
-	return 0;
-
 	chess::init();
 	random_engine engine;
 	return uci::main(engine);

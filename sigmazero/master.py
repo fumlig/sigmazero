@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+
 import os
 import sys
 import argparse
@@ -8,21 +9,6 @@ import yaml
 import colorama
 import torch
 import heapq
-
-
-# todo:
-
-# each slave should be able to have multiple selfplay and training processes
-# could it be possible to keep models in memory?
-
-# would be nice to have models in memory...
-
-# the C++ API (and inferences) requires knowledge of the architecture
-# for the forward method, we might be able to solve it by having the model
-# take a position as input
-
-# selfplayers and trainers can actually be load balanced pretty easily
-# 
 
 
 MODEL_NAME = "model.pt"
@@ -171,34 +157,6 @@ class Slave(object):
 
 	def download_model(self, target_path: str):
 		self.download(self.model_path, target_path)
-
-	def consume(cost: (int, int)) -> False:
-		if self.available[0] - cost[0] <= 0 or self.available[1] - cost[1]:
-			return False
-
-		self.available[0] -= cost[0]
-		self.available[1] -= cost[1]
-
-		return True
-
-	def respawn(self, respawn=False):
-		for trainer in self.trainers:
-			if trainer.poll() is None:
-				print_warning(f"{self.name} has dead trainer")
-				self.spawn_selfplay(trainer.stdout)
-				self.trainers.remove(trainer)
-				self.used[0] -= TRAINING_COST[0]
-				self.used[1] -= TRAINING_COST[1]
-				print_info(f"{self.name} trainer respawned")
-
-		for selfplayer in self.selfplayers:
-			if selfplayer.poll() is None:
-				print_warning(f"{self.name} has dead selfplayer")
-				self.spawn_selfplay(selfplayer.stdout)
-				self.selfplayers.remove(selfplayer)
-				self.used[0] -= SELFPLAY_COST[0]
-				self.used[1] -= SELFPLAY_COST[1]
-				print_info(f"{self.name} selfplayer respawned")
 
 
 if __name__ == "__main__":

@@ -1,14 +1,11 @@
 directory: /tmp
 checkpoints: true
-selfplayers: 3
-trainers: 1
+executable: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training
+
 
 slaves:
 - host: 127.0.0.1
-  name: oskar-laptop
-  gpus: 0
-  cpus: 8
   authorize: true
   directory: /tmp
-  selfplay: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay
-  training: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/training
+  executable: studies/tdde19-advanced-project-course-ai-and-machine-learning/tjack/build/selfplay
+  count: 4

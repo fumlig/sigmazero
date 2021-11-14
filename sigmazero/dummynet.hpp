@@ -21,13 +21,6 @@ struct dummynet_impl: torch::nn::Module
 		return linear(input) + bias;
 	}
 
-
-	torch::Tensor to_input(const chess::position& position)
-	{
-		
-	}
-
-
 	torch::nn::Linear linear;
 	torch::Tensor bias;
 };
