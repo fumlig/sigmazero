@@ -1,8 +1,8 @@
 
+#include "misc.hpp"
 #include "node.hpp"
 #include <chess/chess.hpp>
-#include "misc.hpp"
-#include "network.hpp"
+#include <sigmazero/drl/action_encodings.hpp>
 #include <random>
 #include <vector>
 #include <memory>
@@ -77,8 +77,8 @@ namespace mcts
     {
         for (auto action_prob : action_probabilities)
         {
-            chess::move child_move = Network::move_from_action(state, action_prob.first);
-            chess::position child_state = state.copy_move(child_move); // TODO - Make this optional
+            chess::move child_move = action_encodings::move_from_action(state, action_prob.first);
+            chess::position child_state = state.copy_move(child_move);
             std::shared_ptr<Node> new_child = std::make_shared<Node>(child_state, false, weak_from_this(), child_move);
             new_child->prior = action_prob.second;
             new_child->action = action_prob.first;
@@ -91,16 +91,14 @@ namespace mcts
             children.push_back(new_child);
         }
     }
-    void Node::explore_and_set_priors(const Network &network)
+    void Node::explore_and_set_priors(const std::pair<double, std::unordered_map<size_t, double>>& evaluation)
     {
-        Network::Evaluation result = network.evaluate(state);
-        expand(result.action_probabilities);
-        backpropagate(result.value);
+        expand(evaluation.second);
+        backpropagate(evaluation.first);
     }
 
-    void Node::add_exploration_noise(double dirichlet_alpha, double exploration_factor)
+    void Node::add_exploration_noise(double dirichlet_alpha, double exploration_factor, std::default_random_engine generator)
     {
-        std::default_random_engine generator;
         std::gamma_distribution<double> gamma_distribution(dirichlet_alpha, 1.0);
         for (std::shared_ptr<Node> child : children)
         {
@@ -117,7 +115,10 @@ namespace mcts
         {
             UCB1_scores.push_back(child->is_terminal_node ? 0.0 : child->UCB1());
         }
-
+        if(UCB1_scores.size() == 0) { // Needs to be here, otherwise segmentation fault
+            is_terminal_node = true;
+            return parent.lock() ? parent.lock()->traverse() : shared_from_this();
+        }
         std::shared_ptr<Node> best_child = get_max_element<std::shared_ptr<Node>>(children.begin(), UCB1_scores.begin(), UCB1_scores.end());
 
         if (best_child->children.size() > 0)
@@ -185,25 +186,7 @@ namespace mcts
 
     double Node::get_value() const
     {
-        return n != 0 ? t / n : 0.0;
-    }
-
-
-// Print the main node and its children
-std::string Node::to_string(int layers_left) const
-{
-    std::string tree{};
-    tree += state.get_board().to_string();
-
-        if (layers_left > 0)
-        {
-            tree += '\n' + "---children depth " + std::to_string(layers_left) + " ---\n";
-            for (std::shared_ptr<Node> child_ptr : children)
-            {
-                tree += child_ptr->to_string(layers_left - 1) + '\n';
-            }
-        }
-        return tree;
+        return n != 0 ? t / n : -100;
     }
 
     double Node::WIN_SCORE = 1.0;

@@ -1,13 +1,15 @@
 #include "self_play.hpp"
 #include "mcts.hpp"
-
 #include "node.hpp"
-#include "network.hpp"
+
+#include <sigmazero/drl/action_encodings.hpp>
+#include <sigmazero/drl/sigmanet.hpp>
+#include <chess/chess.hpp>
+
 #include <iostream>
 #include <memory>
 #include <utility>
 #include <algorithm>
-
 #include <vector>
 
 
@@ -15,12 +17,11 @@ void SelfPlayWorker::grind(){
     while(true) {
         play_game();
     }
-
 }
 
 void SelfPlayWorker::play_game(){
     chess::position state = chess::position::from_fen(chess::position::fen_start);
-    mcts::Network network;
+    sigmanet network;
     std::vector<SelfPlayWorker::GameRow> game_rows;
     size_t moves = 0;
 
@@ -50,7 +51,7 @@ void SelfPlayWorker::print_row(const SelfPlayWorker::GameRow& row) {
         auto p = action_values[n-i];
         double value = p.first;
         size_t action = p.second;
-        chess::move move = mcts::Network::move_from_action(row.state, action);
+        chess::move move = action_encodings::move_from_action(row.state, action);
         std::cout << "(" << move.to_lan() << ", " << value << ") - ";
     }
     std::cout << std::endl;

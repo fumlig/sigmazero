@@ -1,19 +1,21 @@
 #include "mcts.hpp"
 #include "node.hpp"
 #include "misc.hpp"
-#include "network.hpp"
 #include <chess/chess.hpp>
 #include <memory>
+#include <sigmazero/drl/sigmanet.hpp>
+
 
 namespace mcts
 {
 
-    std::shared_ptr<Node> mcts(chess::position state, int max_iter, const mcts::Network& network)
+    std::shared_ptr<Node> mcts(chess::position state, int max_iter, sigmanet& network)
     {
-
+        std::default_random_engine generator;
         std::shared_ptr<Node> main_node{std::make_shared<Node>(state)};
-        main_node->explore_and_set_priors(network);
-        main_node->add_exploration_noise(0.3, 0.25);
+        std::pair<double, std::unordered_map<size_t, double>> evaluation = network.evaluate(state);
+        main_node->explore_and_set_priors(evaluation);
+        main_node->add_exploration_noise(0.3, 0.25, generator);
         for(int i = 0 ; i < max_iter ; ++i)
         {
             std::shared_ptr<Node> current_node = main_node->traverse();
@@ -21,7 +23,8 @@ namespace mcts
                 current_node->backpropagate(current_node->get_terminal_value());
                 continue;
             }
-            current_node->explore_and_set_priors(network);
+            evaluation = network.evaluate(current_node->get_state());
+            current_node->explore_and_set_priors(evaluation);
         }
         return main_node;
     }

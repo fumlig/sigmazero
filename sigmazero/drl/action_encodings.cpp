@@ -1,5 +1,6 @@
-#include "network.hpp"
+#include "action_encodings.hpp"
 #include <chess/chess.hpp>
+#include <iostream>
 #include <unordered_map>
 #include <algorithm>
 #include <cmath>
@@ -7,54 +8,11 @@
 #include <cassert>
 #include <set>
 
-#define HANDCRAFTED_NETWORK
-#ifdef HANDCRAFTED_NETWORK
-#include <eval/eval.hpp>
-#endif
 
-namespace mcts {
+bool action_encodings::encoding_initialized = false;
 
-Network::Evaluation Network::evaluate(chess::position& state) const{
-    // Do some torch stuff
-    Network::Evaluation result;
-    double val = 0.5;
-    std::vector<double> action_logits(64*73, 42);
-    result.value = val;
-    #ifdef HANDCRAFTED_NETWORK
-    {
-
-        result.value = eval::evaluate(state);
-        action_logits = std::vector<double>(action_logits.size(), 0.0);
-        std::vector<chess::move> moves{state.moves()};
-        for (const chess::move& move: moves) {
-            chess::undo undo = state.make_move(move);
-            double value = -eval::evaluate(state);
-            state.undo_move(move, undo);
-            size_t action = action_from_move(move);
-            action_logits[action] = value;
-        }
-    }
-    #endif
-    // Softmax legal moves
-    std::vector<chess::move> legal_moves{state.moves()};
-    double exp_sum = 0.0;
-    for (chess::move move: legal_moves) {
-        size_t a = action_from_move(move);
-        result.action_probabilities[a] = std::exp(action_logits[a]);
-        exp_sum += result.action_probabilities[a];
-    }
-    // Normalize
-    for (auto& kv: result.action_probabilities) {
-        kv.second /= exp_sum; 
-    }
-    return result;
-    
-}
-
-bool Network::encoding_initialized = false;
-
-// X-Y coords -> direction index
-std::pair<int, int> Network::knight_directions[8] = {
+// direction index -> X-Y coords
+std::pair<int, int> action_encodings::knight_directions[8] = {
     std::make_pair(1,2),
     std::make_pair(2,1),
     std::make_pair(2,-1),
@@ -64,8 +22,8 @@ std::pair<int, int> Network::knight_directions[8] = {
     std::make_pair(-2,1),
     std::make_pair(-1,2)
 };
-// X-Y coords
-std::pair<int, int> Network::queen_directions[8] = {
+// direction index -> X-Y coords
+std::pair<int, int> action_encodings::queen_directions[8] = {
     std::make_pair(0,1),
     std::make_pair(1,1),
     std::make_pair(1,0),
@@ -76,21 +34,21 @@ std::pair<int, int> Network::queen_directions[8] = {
     std::make_pair(-1,1)
 };
 
-chess::piece Network::underpromotions[3] = {
+chess::piece action_encodings::underpromotions[3] = {
     chess::piece_knight,
     chess::piece_bishop,
     chess::piece_rook
 };
-const std::string Network::QUEEN_ACTION = "Queen";
-const std::string Network::KNIGHT_ACTION = "Knight";
-const std::string Network::UNDERPROMOTION_ACTION = "Underpromotion";
+const std::string action_encodings::QUEEN_ACTION = "Queen";
+const std::string action_encodings::KNIGHT_ACTION = "Knight";
+const std::string action_encodings::UNDERPROMOTION_ACTION = "Underpromotion";
 
-Network::Action Network::actions[64*73];
-std::map<std::tuple<size_t, int, int, size_t>, size_t> Network::queen_actions;
-std::map<std::tuple<size_t, int, int>, size_t> Network::knight_actions;
-std::map<std::tuple<size_t, int, size_t>, size_t> Network::underpromotion_actions;
+action_encodings::Action action_encodings::actions[64*73];
+std::map<std::tuple<size_t, int, int, size_t>, size_t> action_encodings::queen_actions;
+std::map<std::tuple<size_t, int, int>, size_t> action_encodings::knight_actions;
+std::map<std::tuple<size_t, int, size_t>, size_t> action_encodings::underpromotion_actions;
 
-void Network::initialize_encoding_map(){
+void action_encodings::initialize_encoding_map(){
     size_t action = 0;
     for (size_t pos = 0; pos < 64; pos++) {
         for (int dir = 0; dir < 8; dir++) {
@@ -115,7 +73,7 @@ void Network::initialize_encoding_map(){
 }
 
 
-size_t Network::action_from_move(const chess::move& move) {
+size_t action_encodings::action_from_move(const chess::move& move) {
     if (!encoding_initialized) {
         initialize_encoding_map();
     }
@@ -143,7 +101,7 @@ size_t Network::action_from_move(const chess::move& move) {
     return queen_actions[std::make_tuple(pos, dir_x, dir_y, magnitude)];
 }
 
-chess::move Network::move_from_action(const chess::position& state, size_t action_idx) {
+chess::move action_encodings::move_from_action(const chess::position& state, size_t action_idx) {
     if (!encoding_initialized) {
         initialize_encoding_map();
     }
@@ -173,11 +131,9 @@ chess::move Network::move_from_action(const chess::position& state, size_t actio
     int to_y = y + dy;
     chess::square to = static_cast<chess::square>(x + dx + to_y*8);
     chess::move move{from, to};
-    auto [side, piece] = state.pieces().get(move.from);
+    auto [side, piece] = state.get_board().get(move.from);
     if (piece == chess::piece_pawn && (to_y == 0 || to_y == 7)) {
         move.promote = chess::piece::piece_queen;
     }
     return move;
-}
-
 }
