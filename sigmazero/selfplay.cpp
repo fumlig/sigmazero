@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 	// wait for initial model
 	while(!std::filesystem::exists(model_path))
 	{
-		std::cerr << "model does not exist, waiting..." << std::endl;
+		std::cerr << "waiting for initial model" << std::endl;
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
@@ -56,9 +56,9 @@ int main(int argc, char** argv)
 		auto model_write = std::filesystem::last_write_time(model_path);
 		if(model_write > model_changed)
 		{
-			std::cerr << "updated model loaded" << std::endl;
 			torch::load(model, model_path);
 			model_changed = model_write;
+			std::cerr << "updated model loaded" << std::endl;
 		}
 
 		// start new game

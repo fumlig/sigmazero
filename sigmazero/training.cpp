@@ -45,12 +45,20 @@ int main(int argc, char** argv)
 
 	std::filesystem::path model_path = argv[1];
 
-	// save initial model
+	// setup initial model
 	dummynet model(10, 20);
-	torch::save(model, model_path);
-
-	std::cerr << "saved initial model" << std::endl;
-	std::cout << std::endl; // indicate that model has been updated
+	
+	if(std::filesystem::exists(model_path))
+	{
+		torch::load(model, model_path);
+		std::cerr << "loaded existing model" << std::endl;
+	}
+	else
+	{
+		torch::save(model, model_path);
+		std::cerr << "saved initial model" << std::endl;
+		std::cout << std::endl; // indicate that model has been updated
+	}
 
 	// statistics
 	unsigned long long received = 0;
@@ -75,7 +83,6 @@ int main(int argc, char** argv)
 		while(replay_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 		{
 			std::string replay_encoding = replay_future.get();
-			std::cerr << "replay bytes: " << replay_encoding.size() << std::endl;
 
 			std::string encoded_image;
 			std::string encoded_value;
