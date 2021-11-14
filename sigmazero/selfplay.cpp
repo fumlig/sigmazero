@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -5,9 +6,12 @@
 #include <filesystem>
 #include <sstream>
 #include <random>
+#include <memory>
 
 #include <chess/chess.hpp>
 #include <torch/torch.h>
+#include <sigmazero/mcts/node.hpp>
+#include <sigmazero/drl/sigmanet.hpp>
 
 #include "dummynet.hpp"
 #include "base64.hpp"
@@ -30,7 +34,7 @@ int main(int argc, char** argv)
 	}
 
 	chess::init();
-
+	std::default_random_engine generator; // To add exploration noise
 	std::filesystem::path model_path(argv[1]);
 
 	// wait for initial model
@@ -41,7 +45,7 @@ int main(int argc, char** argv)
 	}
 
 	// load initial model
-	dummynet model(10, 20);
+	sigmanet model(0, 64, 50);
 	torch::load(model, model_path);
 	
 	std::cerr << "loaded model" << std::endl;
@@ -69,21 +73,43 @@ int main(int argc, char** argv)
 		std::vector<torch::Tensor> values;
 		std::vector<torch::Tensor> policies;
 
+		int mcts_iter = 80;
 		while(!game.is_checkmate() && game.size() <= 50)
 		{
+			std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
+			std::pair<double, std::unordered_map<size_t, double>> evaluation = model.evaluate(game.get_position());
+			main_node->explore_and_set_priors(evaluation);
+			main_node->add_exploration_noise(0.3, 0.25, generator);
+
+			for(int i = 0 ; i < mcts_iter ; ++i) {
+				std::shared_ptr<mcts::Node> current_node = main_node->traverse();
+				if(current_node->is_over()) {
+					current_node->backpropagate(current_node->get_terminal_value());
+					continue;
+				}
+				std::cout << "iteration i=" << i << ", evaluating...";
+				evaluation = model.evaluate(current_node->get_state());
+				current_node->explore_and_set_priors(evaluation);
+			}
 			// todo: extract from position
-			torch::Tensor image = torch::zeros(10);
-			torch::Tensor value = torch::zeros(1);
-			torch::Tensor policy = torch::zeros(20);
+			torch::Tensor image = model.encode_input(game.get_position());
+			//torch::Tensor value = torch::zeros(1);
+			std::vector<double> action_distribution = main_node->action_distribution();
+			torch::Tensor policy = torch::from_blob((double*)action_distribution.data(), action_distribution.size());
 
 			// save in replay
-			images.push_back(image);
-			values.push_back(value);
+			images.push_back(image); // TODO: Flip board if necessary etc.
+			//values.push_back(value);
 			policies.push_back(policy);
 
 			// next position
-			game.push(game.get_position().moves().front());
+			game.push(main_node->best_move());
 		}
+
+		// Fill value with final score
+		values.reserve(images.size());
+		double final_value = 0; // TODO: assign correct value
+		std::fill(values.begin(), values.end(), torch::tensor(final_value));
 
 		// send replay
 		//std::cerr << "sending selfplay game" << std::endl;

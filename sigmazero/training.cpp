@@ -14,7 +14,7 @@
 #include <chess/chess.hpp>
 #include <torch/torch.h>
 
-#include "dummynet.hpp"
+#include <sigmazero/drl/sigmanet.hpp>
 #include "base64.hpp"
 
 
@@ -37,7 +37,7 @@ static std::string readline(std::istream& in)
 
 int main(int argc, char** argv)
 {
-	dummynet model(10, 20);
+	sigmanet model(0, 64, 50);
 
 	if(argc != 2)
 	{
@@ -55,6 +55,21 @@ int main(int argc, char** argv)
 
 	// start training
 	std::cerr << "starting training" << std::endl;
+	torch::Device device(torch::kCPU);
+	if(torch::cuda::is_available())
+	{
+		device = torch::Device(torch::kCUDA);
+		std::cout << "Moving model to GPU" << std::endl;
+	}
+	else {
+		std::cout << "GPU not found" << std::endl;
+	}
+	model.to(device);
+	// Initialize optimizer etc
+	// TODO: Get params as args?
+	torch::optim::SGD optimizer(model.parameters(), 
+    torch::optim::SGDOptions(0.01).momentum(0.9).weight_decay(0.0001));
+    auto loss_fn = sigma_loss; // Defined in sigmanet.h
 
 	const std::size_t window_size = 1024;
 	const std::size_t batch_size = 256;
@@ -130,9 +145,20 @@ int main(int argc, char** argv)
 		//std::cerr << "batch ready" << std::endl;
 
 		// train on batch
-		// todo
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		model.train();
+		int n_epochs = 5;
+		for(int epoch = 0 ; epoch < n_epochs ; ++epoch)
+		{
+			model.zero_grad();
+			std::pair<torch::Tensor, torch::Tensor> output = model.forward(batch_images);
+			auto loss = loss_fn(output.first, batch_values, output.second, batch_policies);
+			std::cout << "Epoch " << epoch << ", loss: " << loss.item<float>() << std::endl;
+			loss.backward();
+			optimizer.step();
+		}
 
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		// TODO: Only update model if it outperforms previous?
 		// update model
 		torch::save(model, model_path);
 		std::cout << std::endl; // indicate that model has updated
