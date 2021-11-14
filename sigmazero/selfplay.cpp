@@ -62,12 +62,8 @@ int main(int argc, char** argv)
 		}
 
 		// start new game
+		std::cerr << "new game started" << std::endl;
 		chess::game game;
-
-		// replay data
-		std::vector<torch::Tensor> images;
-		std::vector<torch::Tensor> values;
-		std::vector<torch::Tensor> policies;
 
 		while(!game.is_checkmate() && game.size() <= 50)
 		{
@@ -76,25 +72,14 @@ int main(int argc, char** argv)
 			torch::Tensor value = torch::zeros(1);
 			torch::Tensor policy = torch::zeros(20);
 
-			// send game image
-			images.push_back(image);
-			values.push_back(value);
-			policies.push_back(policy);
+			// send tensors
+			std::cout << encode(image) << ' ' << encode(value) << ' ' << encode(policy) << std::endl;
 
 			// next position
 			game.push(game.get_position().moves().front());
 		}
 
-		// send replay
-		//std::cerr << "sending selfplay game" << std::endl;
-
-		torch::Tensor replay_images = torch::stack(images);
-		torch::Tensor replay_values = torch::stack(values);
-		torch::Tensor replay_policies = torch::stack(policies);
-
-		// this has to be synchronized
-		std::cout << encode(replay_images) << ' ' << encode(replay_values) << ' ' << encode(replay_policies) << std::endl;
-
+		// todo: remove this, just here to avoid congestion of communication channel
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 
