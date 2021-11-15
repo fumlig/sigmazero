@@ -14,7 +14,7 @@
 #include <chess/chess.hpp>
 #include <torch/torch.h>
 
-#include <sigmazero/drl/sigmanet.hpp>
+#include "drl/sigmanet.hpp"
 #include "base64.hpp"
 
 
@@ -37,8 +37,6 @@ static std::string readline(std::istream& in)
 
 int main(int argc, char** argv)
 {
-	sigmanet model(0, 64, 50);
-
 	if(argc != 2)
 	{
 		std::cerr << "missing model path" << std::endl;
@@ -46,6 +44,9 @@ int main(int argc, char** argv)
 	}
 
 	std::filesystem::path model_path = argv[1];
+
+	// setup initial model
+	sigmanet model(0, 64, 10);
 	
 	if(std::filesystem::exists(model_path))
 	{
@@ -59,32 +60,28 @@ int main(int argc, char** argv)
 		std::cout << std::endl; // indicate that model has been updated
 	}
 
-	// start training
-	std::cerr << "starting training" << std::endl;
 	torch::Device device(torch::kCPU);
-	if(torch::cuda::is_available())
-	{
-		device = torch::Device(torch::kCUDA);
-		std::cout << "Moving model to GPU" << std::endl;
-	}
-	else {
-		std::cout << "GPU not found" << std::endl;
-	}
-	model.to(device);
-	// Initialize optimizer etc
-	// TODO: Get params as args?
-	torch::optim::SGD optimizer(model.parameters(), 
-    torch::optim::SGDOptions(0.01).momentum(0.9).weight_decay(0.0001));
-    auto loss_fn = sigma_loss; // Defined in sigmanet.h
-
-	// replay window
-	const std::size_t window_size = 1024;
-	const std::size_t batch_size = 256;
-
+    // Check cuda support
+    if(torch::cuda::is_available())
+    {
+        device = torch::Device(torch::kCUDA);
+        std::cerr << "Using CUDA" << std::endl;
+    }
+    else {
+        std::cerr << "Using CPU" << std::endl;
+    }
+	model->train();
+	model->to(device);
+	torch::optim::SGD optimizer(model->parameters(), 
+    torch::optim::SGDOptions(0.2).momentum(0.9).weight_decay(0.0001)); // varying lr
+	//torch::optim::LRScheduler()
 	// statistics
 	unsigned long long received = 0;
 	unsigned long long consumed = 0;
 
+	// replay window
+	const std::size_t window_size = 64;
+	const std::size_t batch_size = 16;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;
@@ -101,13 +98,11 @@ int main(int argc, char** argv)
 		while(replay_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 		{
 			std::string replay_encoding = replay_future.get();
-
 			std::string encoded_image;
 			std::string encoded_value;
 			std::string encoded_policy;
 
 			std::istringstream(replay_encoding) >> encoded_image >> encoded_value >> encoded_policy;
-
 			torch::Tensor replay_image = decode(encoded_image).unsqueeze(0);
 			torch::Tensor replay_value = decode(encoded_value).unsqueeze(0);
 			torch::Tensor replay_policy = decode(encoded_policy).unsqueeze(0);
@@ -153,20 +148,15 @@ int main(int argc, char** argv)
 		torch::Tensor batch_policies = window_policies.index({batch_sample});
 
 		//std::cerr << "batch ready" << std::endl;
-
 		// train on batch
-		model.train();
-		
-		
-		model.zero_grad();
-		std::pair<torch::Tensor, torch::Tensor> output = model.forward(batch_images);
-		auto loss = loss_fn(output.first, batch_values, output.second, batch_policies);
+		model->zero_grad();
+		auto [value, policy] = model->forward(batch_images);
+		auto loss = sigma_loss(value, batch_values, policy, batch_policies);
 		loss.backward();
 		optimizer.step();
-		
+		std::cerr << "Loss: " << loss.item<float>() << std::endl;
 		consumed += batch_size;
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		// TODO: Only update model if it outperforms previous?
+
 		// update model
 		torch::save(model, model_path);
 		std::cout << std::endl; // indicate that model has updated
