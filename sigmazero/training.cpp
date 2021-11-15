@@ -151,6 +151,7 @@ int main(int argc, char** argv)
 		// train on batch
 		model->zero_grad();
 		auto [value, policy] = model->forward(batch_images);
+		//std::cerr << "distribution label: " << batch_policies << std::endl; 
 		auto loss = sigma_loss(value, batch_values, policy, batch_policies);
 		loss.backward();
 		optimizer.step();

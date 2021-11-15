@@ -91,6 +91,7 @@ int main(int argc, char **argv)
 			images.push_back(model->encode_input(game.get_position()));
 			policies.push_back(torch::tensor(main_node->action_distribution()));
 			
+			//std::cerr << "action dist " << torch::tensor(main_node->action_distribution()) << std::endl;
 			// next position
 			chess::move best_move = main_node->best_move();
 			//std::cerr << "Making move " << best_move.to_lan() << std::endl;
