@@ -146,16 +146,14 @@ int main(int argc, char** argv)
 
 		// train on batch
 		model.train();
-		int n_epochs = 5;
-		for(int epoch = 0 ; epoch < n_epochs ; ++epoch)
-		{
-			model.zero_grad();
-			std::pair<torch::Tensor, torch::Tensor> output = model.forward(batch_images);
-			auto loss = loss_fn(output.first, batch_values, output.second, batch_policies);
-			std::cout << "Epoch " << epoch << ", loss: " << loss.item<float>() << std::endl;
-			loss.backward();
-			optimizer.step();
-		}
+		
+		
+		model.zero_grad();
+		std::pair<torch::Tensor, torch::Tensor> output = model.forward(batch_images);
+		auto loss = loss_fn(output.first, batch_values, output.second, batch_policies);
+		loss.backward();
+		optimizer.step();
+		
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		// TODO: Only update model if it outperforms previous?
