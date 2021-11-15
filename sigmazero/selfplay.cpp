@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 	// wait for initial model
 	while(!std::filesystem::exists(model_path))
 	{
-		std::cerr << "model does not exist, waiting..." << std::endl;
+		std::cerr << "waiting for initial model" << std::endl;
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
@@ -60,12 +60,13 @@ int main(int argc, char** argv)
 		auto model_write = std::filesystem::last_write_time(model_path);
 		if(model_write > model_changed)
 		{
-			std::cerr << "updated model loaded" << std::endl;
 			torch::load(model, model_path);
 			model_changed = model_write;
+			std::cerr << "updated model loaded" << std::endl;
 		}
 
 		// start new game
+		std::cerr << "new game started" << std::endl;
 		chess::game game;
 
 		// replay data
@@ -93,23 +94,25 @@ int main(int argc, char** argv)
 			}
 			// todo: extract from position
 			torch::Tensor image = model.encode_input(game.get_position());
-			//torch::Tensor value = torch::zeros(1);
+			torch::Tensor value = torch::zeros(1); //???
 			std::vector<double> action_distribution = main_node->action_distribution();
 			torch::Tensor policy = torch::from_blob((double*)action_distribution.data(), action_distribution.size());
 
 			// save in replay
 			images.push_back(image); // TODO: Flip board if necessary etc.
-			//values.push_back(value);
+			values.push_back(value);
 			policies.push_back(policy);
+			// send tensors
+			std::cout << encode(image) << ' ' << encode(value) << ' ' << encode(policy) << std::endl;
 
 			// next position
 			game.push(main_node->best_move());
 		}
 
 		// Fill value with final score
-		values.reserve(images.size());
-		double final_value = 0; // TODO: assign correct value
-		std::fill(values.begin(), values.end(), torch::tensor(final_value));
+		//values.reserve(images.size());
+		//double final_value = 0; // TODO: assign correct value
+		//std::fill(values.begin(), values.end(), torch::tensor(final_value));
 
 		// send replay
 		//std::cerr << "sending selfplay game" << std::endl;
@@ -120,6 +123,7 @@ int main(int argc, char** argv)
 
 		std::cout << encode(replay_images) << ' ' << encode(replay_values) << ' ' << encode(replay_policies) << std::endl;
 
+		// todo: remove this, just here to avoid congestion of communication channel
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 
