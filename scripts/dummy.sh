@@ -2,6 +2,6 @@
 
 while true
 do
-	echo "dummy"
-	sleep 1
+	echo "dummy $1"
+	sleep $2
 done

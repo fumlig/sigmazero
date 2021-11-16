@@ -4,7 +4,10 @@ while true
 do
 	for f in "$@"
 	do
-		read -r line < $f
-		echo $line
+		while read -r -t 0 line < $f
+		do
+			echo $line
+
+		done
 	done
 done
