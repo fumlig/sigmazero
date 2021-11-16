@@ -38,7 +38,7 @@ torch::Tensor residual_block::forward(torch::Tensor x) {
     return x;
 }
 // History unused currently
-sigmanet::sigmanet(int history, int filters, int blocks) : history{history}, in_channels{1*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
+sigmanet_impl::sigmanet_impl(int history, int filters, int blocks) : history{history}, in_channels{1*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
 
     input_conv = torch::nn::Sequential(
         torch::nn::Conv2d(torch::nn::Conv2dOptions(in_channels, filters, 3).stride(1).padding(1)),
@@ -79,7 +79,7 @@ sigmanet::sigmanet(int history, int filters, int blocks) : history{history}, in_
 }
 
 
-std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
+std::pair<torch::Tensor, torch::Tensor> sigmanet_impl::forward(torch::Tensor x) {
 
     x = input_conv->forward(x);
     x = residual->forward(x);
@@ -92,21 +92,20 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet::forward(torch::Tensor x) {
 
 // Assumes that model is in eval mode
 //TODO: Hash chess::move???????
-std::pair<double, std::unordered_map<size_t, double>> sigmanet::evaluate(const chess::position& p)
+std::pair<double, std::unordered_map<size_t, double>> sigmanet_impl::evaluate(const chess::position& p)
 {
     auto[value, policy_logits] = forward(encode_input(p).unsqueeze(0));
-    std::cout << "forward passed through network. ";
     // policy now is a 4672x1 tensor of logits
     // Value is a 1x1 tensor of a policy
     return decode_output(policy_logits, value, p);
     // !IMPORTANT: when passing values to network, pass according to player side
 }
 
-std::pair<double, std::unordered_map<size_t, double>> sigmanet::decode_output(const torch::Tensor& policy, torch::Tensor value, const chess::position& p) const {
+std::pair<double, std::unordered_map<size_t, double>> sigmanet_impl::decode_output(const torch::Tensor& policy, torch::Tensor value, const chess::position& p) const {
     return std::make_pair(value.item<double>(), valid_policy_probabilities(policy, p));
 }
 
-std::unordered_map<size_t, double> sigmanet::valid_policy_probabilities(const torch::Tensor& policy_logits, const chess::position& state) const {
+std::unordered_map<size_t, double> sigmanet_impl::valid_policy_probabilities(const torch::Tensor& policy_logits, const chess::position& state) const {
         
     // Softmax legal moves
     std::unordered_map<size_t, double> policy_probabilities;
@@ -126,7 +125,7 @@ std::unordered_map<size_t, double> sigmanet::valid_policy_probabilities(const to
     return policy_probabilities;
 };
 
-torch::Tensor sigmanet::encode_input(const chess::position& pos) const
+torch::Tensor sigmanet_impl::encode_input(const chess::position& pos) const
 {
     using namespace torch::indexing;
 
@@ -182,7 +181,7 @@ torch::Tensor sigmanet::encode_input(const chess::position& pos) const
 
 }
 
-int sigmanet::get_input_channels() const
+int sigmanet_impl::get_input_channels() const
 {
     return in_channels;
 }

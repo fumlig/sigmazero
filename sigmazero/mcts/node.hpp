@@ -41,7 +41,7 @@ class Node : public std::enable_shared_from_this<Node>
         std::shared_ptr<Node> best_child() const;
         // Get action distribution for the children of this node.
         // Should be ran after the entire mcts search is completeted.
-        std::vector<double> action_distribution(size_t num_actions);
+        std::vector<double> action_distribution(size_t num_actions=64*73);
         // Get the move that gives the best child
         // Useful for baseline mcts algorithm
         chess::move best_move() const;

@@ -21,7 +21,7 @@ public:
 };
 
 
-class sigmanet : public torch::nn::Module {
+class sigmanet_impl : public torch::nn::Module {
 
     int history;
     int in_channels;
@@ -38,7 +38,7 @@ class sigmanet : public torch::nn::Module {
 
 public:
 
-    sigmanet(int history = 8, int filters = 64, int blocks = 10);
+    sigmanet_impl(int history = 8, int filters = 64, int blocks = 10);
 
     std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor x);
 
@@ -63,6 +63,8 @@ public:
 
     int get_input_channels() const;
 };
+
+TORCH_MODULE_IMPL(sigmanet, sigmanet_impl);
 
 torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p);
 

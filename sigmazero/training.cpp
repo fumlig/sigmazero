@@ -14,7 +14,7 @@
 #include <chess/chess.hpp>
 #include <torch/torch.h>
 
-#include "dummynet.hpp"
+#include "drl/sigmanet.hpp"
 #include "base64.hpp"
 
 
@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 	std::filesystem::path model_path = argv[1];
 
 	// setup initial model
-	dummynet model(10, 20);
+	sigmanet model(0, 64, 10);
 	
 	if(std::filesystem::exists(model_path))
 	{
@@ -60,13 +60,28 @@ int main(int argc, char** argv)
 		std::cout << std::endl; // indicate that model has been updated
 	}
 
+	torch::Device device(torch::kCPU);
+    // Check cuda support
+    if(torch::cuda::is_available())
+    {
+        device = torch::Device(torch::kCUDA);
+        std::cerr << "Using CUDA" << std::endl;
+    }
+    else {
+        std::cerr << "Using CPU" << std::endl;
+    }
+	model->train();
+	model->to(device);
+	torch::optim::SGD optimizer(model->parameters(), 
+    torch::optim::SGDOptions(0.2).momentum(0.9).weight_decay(0.0001)); // varying lr
+	//torch::optim::LRScheduler()
 	// statistics
 	unsigned long long received = 0;
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 1024;
-	const std::size_t batch_size = 256;
+	const std::size_t window_size = 64;
+	const std::size_t batch_size = 16;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;
@@ -83,13 +98,11 @@ int main(int argc, char** argv)
 		while(replay_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 		{
 			std::string replay_encoding = replay_future.get();
-
 			std::string encoded_image;
 			std::string encoded_value;
 			std::string encoded_policy;
 
 			std::istringstream(replay_encoding) >> encoded_image >> encoded_value >> encoded_policy;
-
 			torch::Tensor replay_image = decode(encoded_image).unsqueeze(0);
 			torch::Tensor replay_value = decode(encoded_value).unsqueeze(0);
 			torch::Tensor replay_policy = decode(encoded_policy).unsqueeze(0);
@@ -135,10 +148,14 @@ int main(int argc, char** argv)
 		torch::Tensor batch_policies = window_policies.index({batch_sample});
 
 		//std::cerr << "batch ready" << std::endl;
-
 		// train on batch
-		// todo
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		model->zero_grad();
+		auto [value, policy] = model->forward(batch_images);
+		//std::cerr << "distribution label: " << batch_policies << std::endl; 
+		auto loss = sigma_loss(value, batch_values, policy, batch_policies);
+		loss.backward();
+		optimizer.step();
+		std::cerr << "Loss: " << loss.item<float>() << std::endl;
 		consumed += batch_size;
 
 		// update model
