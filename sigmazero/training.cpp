@@ -106,7 +106,7 @@ int main(int argc, char** argv)
 			torch::Tensor replay_image = decode(encoded_image).unsqueeze(0);
 			torch::Tensor replay_value = decode(encoded_value).unsqueeze(0);
 			torch::Tensor replay_policy = decode(encoded_policy).unsqueeze(0);
-
+			std::cout << replay_policy << std::endl;
 			if(first_replay)
 			{
 				first_replay = false;

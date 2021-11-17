@@ -5,6 +5,7 @@
 #include <sigmazero/drl/action_encodings.hpp>
 #include <random>
 #include <vector>
+#include <iostream>
 #include <memory>
 #include <unordered_map>
 
@@ -154,7 +155,15 @@ namespace mcts
         }
         for (std::shared_ptr<Node> child : children)
         {
+            if (distribution[child->action] != 0) {
+                double val = distribution[child->action];
+                std::cerr << "Non-zero: " << val << std::endl;
+            }
             distribution[child->action] /= tot_visits;
+            if (distribution[child->action] != 0) {
+                double val = distribution[child->action];
+                std::cerr << "Non-zero post: " << val << std::endl;
+            }
         }
         return distribution;
     }

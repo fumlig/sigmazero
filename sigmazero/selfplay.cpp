@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 		std::vector<torch::Tensor> images{};
 		std::vector<torch::Tensor> policies{};
 
-		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 50) // TODO: Check end
+		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 2) // TODO: Check end
 		{
 			std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
 			auto evaluation = model->evaluate(game.get_position());
@@ -89,7 +89,20 @@ int main(int argc, char **argv)
 			}
 			// todo: extract from position
 			images.push_back(model->encode_input(game.get_position()));
-			policies.push_back(torch::tensor(main_node->action_distribution()));
+			std::vector<double> action_dist = main_node->action_distribution();
+			for (double v: action_dist) {
+				if (v != 0) {
+					std::cerr << "Not zero (selfplay) " << v << std::endl;
+				}
+			}
+			torch::Tensor action_tensor = torch::tensor(action_dist);
+			policies.push_back(action_tensor);
+			for (int i = 0; i < 64*73; i++) {
+				double v = action_tensor[i].item<double>();
+				if (v != 0) {
+					std::cerr << "Not zero in tensor(selfplay) " << v << std::endl;
+				}
+			}
 			
 			//std::cerr << "action dist " << torch::tensor(main_node->action_distribution()) << std::endl;
 			// next position
