@@ -65,15 +65,13 @@ torch_dep = declare_dependency(
 	link_args : ['-Wl,--no-as-needed']
 )
 
-# common
-common_src = [
-	'common/uci/uci.cpp',
-	'common/output_thread.cpp'
+# uci
+uci_src = [
+	'uci/uci.cpp',
+	'uci/output_thread.cpp'
 ]
-
-
-common_inc = include_directories('common')
-common_dep = declare_dependency(sources : common_src, include_directories : common_inc)
+uci_inc = include_directories('uci')
+uci_dep = declare_dependency(sources : uci_src, include_directories : uci_inc)
 
 # example
 example_src = [
@@ -84,7 +82,7 @@ example_src = [
 example = executable(
 	'example',
 	example_src,
-	dependencies : [libchess_dep, common_dep, thread_dep, torch_dep]
+	dependencies : [libchess_dep, uci_dep, thread_dep, torch_dep]
 )
 
 # sigmazero
@@ -97,7 +95,7 @@ sigmazero_src = [
 sigmazero = executable(
 	'sigmazero',
 	sigmazero_src,
-	dependencies : [libchess_dep, common_dep, thread_dep, torch_dep]
+	dependencies : [libchess_dep, uci_dep, thread_dep, torch_dep]
 )
 
 training = executable(
