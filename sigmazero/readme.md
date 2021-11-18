@@ -18,13 +18,30 @@ A training process should read replays from standard in, line by line. It should
 Run one selfplayer and one trainer:
 
 ```bash
-MODEL=model.pt
-./selfplay $MODEL | ./training $MODEL
+model=model.pt
+./selfplay $model | ./training $model
 ```
 
 Run multiple selfplayers and one trainer:
 
 ```bash
-MODEL=model.pt
-./training $MODEL <(./selfplay $MODEL) <(./selfplay $MODEL) <(./selfplay $MODEL)
+model=model.pt
+./training $model <(./selfplay $model) <(./selfplay $model) <(./selfplay $model)
+```
+
+Olympen example:
+
+```bash
+user=$(whoami)
+repo=~/tjack
+model=~/sigmazero.pt
+training=$repo/build/training
+selfplay=$repo/build/selfplay
+
+function command {
+	id=$1
+	echo "ssh $user@olympen1-$id.ad.liu.se $selfplay $model"
+}
+
+$training $model <($(command 101)) <($(command 102)) <($(command 103))
 ```
