@@ -26,19 +26,5 @@ Run multiple selfplayers and one trainer:
 
 ```bash
 MODEL=model.pt
-REPLAYS=replays.fifo
-WORKERS=5
-
-mkfifo $REPLAYS
-for i in {1..$WORKERS}; do ./selfplay $MODEL >> $REPLAYS &; done
-./training $MODEL < $REPLAYS
-```
-
-The training process will save its latest model as *model.pt* and receive replays from the selfplay process, which plays with the lastest model.
-
-To run in a cluster:
-
-```sh
-CONFIG=<path to config of master and slaves>
-./master.py $CONFIG
+./training $MODEL <(./selfplay $MODEL) <(./selfplay $MODEL) <(./selfplay $MODEL)
 ```
