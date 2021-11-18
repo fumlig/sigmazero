@@ -186,10 +186,11 @@ int sigmanet_impl::get_input_channels() const
     return in_channels;
 }
 
-torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor pi, torch::Tensor p) {
+torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor p, torch::Tensor pi) {
 
+    p = torch::add(p, 1e-8);
     torch::Tensor value_loss = torch::sum(torch::mul(z-v, z-v));
-    torch::Tensor policy_loss = torch::sum(torch::mul(pi, torch::log(p)));
+    torch::Tensor policy_loss = -torch::sum(torch::mul(pi, torch::log(p)));
     torch::Tensor loss = value_loss + policy_loss;
     return loss;
 }
