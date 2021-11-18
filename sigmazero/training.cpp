@@ -10,11 +10,14 @@
 #include <utility>
 #include <future>
 #include <thread>
+#include <functional>
+#include <vector>
 
 #include <chess/chess.hpp>
 #include <torch/torch.h>
 
 #include "drl/sigmanet.hpp"
+#include "sync_queue.hpp"
 #include "base64.hpp"
 
 
@@ -27,27 +30,41 @@ static torch::Tensor decode(const std::string& data)
 }
 
 
-static std::string readline(std::istream& in)
+static void receive_replays(std::vector<std::ifstream>& files, sync_queue<std::string>& queue)
 {
-	std::string line;
-	std::getline(in, line);
-	return line;
+	std::vector<std::reference_wrapper<std::istream>> streams(files.begin(), files.end());
+
+	if(files.empty())
+	{
+		streams.push_back(std::cin);
+	}
+
+	std::cerr << "started replay thread with " << streams.size() << " sources" << std::endl;
+
+	while(true)
+	{
+		for(std::istream& stream: streams)
+		{
+			std::string replay;
+			std::getline(stream, replay);
+			queue.push(replay);
+		}
+	}
 }
 
 
 int main(int argc, char** argv)
 {
-	if(argc != 2)
+	if(argc < 2)
 	{
 		std::cerr << "missing model path" << std::endl;
 		return 1;
 	}
 
-	std::filesystem::path model_path = argv[1];
-
 	// setup initial model
+	std::filesystem::path model_path(argv[1]);
 	sigmanet model(0, 64, 10);
-	
+
 	if(std::filesystem::exists(model_path))
 	{
 		torch::load(model, model_path);
@@ -57,24 +74,32 @@ int main(int argc, char** argv)
 	{
 		torch::save(model, model_path);
 		std::cerr << "saved initial model" << std::endl;
-		std::cout << std::endl; // indicate that model has been updated
+		//std::cout << std::endl; // indicate that model has been updated
 	}
 
+	// start receiving replays
+	std::vector<std::ifstream> replay_files(argv+2, argv+argc);
+	sync_queue<std::string> replay_queue;
+	std::thread replay_thread(receive_replays, std::ref(replay_files), std::ref(replay_queue));
+
+    // check cuda support
 	torch::Device device(torch::kCPU);
-    // Check cuda support
     if(torch::cuda::is_available())
     {
         device = torch::Device(torch::kCUDA);
         std::cerr << "Using CUDA" << std::endl;
     }
-    else {
+    else
+	{
         std::cerr << "Using CPU" << std::endl;
     }
+
 	model->train();
 	model->to(device);
-	torch::optim::SGD optimizer(model->parameters(), 
+	torch::optim::SGD optimizer(model->parameters(),
     torch::optim::SGDOptions(0.2).momentum(0.9).weight_decay(0.0001)); // varying lr
-	//torch::optim::LRScheduler()
+
+
 	// statistics
 	unsigned long long received = 0;
 	unsigned long long consumed = 0;
@@ -86,8 +111,7 @@ int main(int argc, char** argv)
 	torch::Tensor window_images;
 	torch::Tensor window_values;
 	torch::Tensor window_policies;
-	
-	std::future<std::string> replay_future = std::async(readline, std::ref(std::cin));
+
 	bool first_replay = true;
 
 	// start training
@@ -95,22 +119,25 @@ int main(int argc, char** argv)
 
 	while(true)
 	{
-		while(replay_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+		while(replay_queue.size())
 		{
-			std::string replay_encoding = replay_future.get();
+			std::string replay = replay_queue.pop();
+
 			std::string encoded_image;
 			std::string encoded_value;
 			std::string encoded_policy;
 
-			std::istringstream(replay_encoding) >> encoded_image >> encoded_value >> encoded_policy;
+			std::istringstream(replay) >> encoded_image >> encoded_value >> encoded_policy;
+
 			torch::Tensor replay_image = decode(encoded_image).unsqueeze(0);
 			torch::Tensor replay_value = decode(encoded_value).unsqueeze(0);
 			torch::Tensor replay_policy = decode(encoded_policy).unsqueeze(0);
-			std::cout << replay_policy << std::endl;
+			
+			//std::cerr << replay_policy << std::endl;
+			
 			if(first_replay)
 			{
 				first_replay = false;
-
 				window_images = replay_image;
 				window_values = replay_value;
 				window_policies = replay_policy;
@@ -123,7 +150,7 @@ int main(int argc, char** argv)
 			}
 
 			std::cerr << "selfplay result received" << std::endl;
-			replay_future = std::async(readline, std::ref(std::cin));
+
 			received++;
 		}
 
@@ -151,16 +178,16 @@ int main(int argc, char** argv)
 		// train on batch
 		model->zero_grad();
 		auto [value, policy] = model->forward(batch_images);
-		//std::cerr << "distribution label: " << batch_policies << std::endl; 
+		//std::cerr << "distribution label: " << batch_policies << std::endl;
 		auto loss = sigma_loss(value, batch_values, policy, batch_policies);
 		loss.backward();
 		optimizer.step();
-		std::cerr << "Loss: " << loss.item<float>() << std::endl;
+		std::cerr << "loss: " << loss.item<float>() << std::endl;
 		consumed += batch_size;
 
 		// update model
 		torch::save(model, model_path);
-		std::cout << std::endl; // indicate that model has updated
+		//std::cout << std::endl; // indicate that model has updated
 
 		// show statistics
 		std::cerr << "received: " << received << ", consumed: " << consumed << std::endl;

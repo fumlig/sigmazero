@@ -58,9 +58,16 @@ int main(int argc, char **argv)
 		auto model_write = std::filesystem::last_write_time(model_path);
 		if (model_write > model_changed)
 		{
-			torch::load(model, model_path);
-			model_changed = model_write;
-			std::cerr << "updated model loaded" << std::endl;
+			try
+			{
+				torch::load(model, model_path);
+				model_changed = model_write;
+				std::cerr << "updated model loaded" << std::endl;
+			}
+			catch(const std::exception& e)
+			{
+				std::cerr << "loading updated model failed" << std::endl;
+			}
 		}
 
 		// start new game
@@ -92,7 +99,7 @@ int main(int argc, char **argv)
 			std::vector<double> action_dist = main_node->action_distribution();
 			for (double v: action_dist) {
 				if (v != 0) {
-					std::cerr << "Not zero (selfplay) " << v << std::endl;
+					//std::cerr << "Not zero (selfplay) " << v << std::endl;
 				}
 			}
 			torch::Tensor action_tensor = torch::tensor(action_dist);
@@ -100,14 +107,14 @@ int main(int argc, char **argv)
 			for (int i = 0; i < 64*73; i++) {
 				double v = action_tensor[i].item<double>();
 				if (v != 0) {
-					std::cerr << "Not zero in tensor(selfplay) " << v << std::endl;
+					//std::cerr << "Not zero in tensor(selfplay) " << v << std::endl;
 				}
 			}
-			
+
 			//std::cerr << "action dist " << torch::tensor(main_node->action_distribution()) << std::endl;
 			// next position
 			chess::move best_move = main_node->best_move();
-			//std::cerr << "Making move " << best_move.to_lan() << std::endl;
+			std::cerr << "making move " << best_move.to_lan() << std::endl;
 			game.push(best_move);
 		}
 
@@ -124,7 +131,9 @@ int main(int argc, char **argv)
 		for(int i = 0 ; i < game.size() ; ++i) {
 			torch::Tensor value = torch::tensor(i%2 == 0 ? terminal_value : -terminal_value);
 			std::cout << encode(images[i]) << ' ' << encode(value) << ' ' << encode(policies[i]) << std::endl; //according to side
+
 		}
+		std::cerr << "sent replay of size " << game.size() << std::endl;
 	}
 
 	return 0;

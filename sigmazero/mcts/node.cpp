@@ -157,12 +157,12 @@ namespace mcts
         {
             if (distribution[child->action] != 0) {
                 double val = distribution[child->action];
-                std::cerr << "Non-zero: " << val << std::endl;
+                //std::cerr << "Non-zero: " << val << std::endl;
             }
             distribution[child->action] /= tot_visits;
             if (distribution[child->action] != 0) {
                 double val = distribution[child->action];
-                std::cerr << "Non-zero post: " << val << std::endl;
+                //std::cerr << "Non-zero post: " << val << std::endl;
             }
         }
         return distribution;
