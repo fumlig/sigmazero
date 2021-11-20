@@ -175,7 +175,10 @@ namespace mcts
     {
         return n;
     }
-
+    chess::move Node::get_move() const
+    {
+        return move;
+    } 
     double Node::get_value() const
     {
         return n != 0 ? t / n : -100;

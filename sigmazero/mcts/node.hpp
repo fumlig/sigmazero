@@ -51,6 +51,8 @@ class Node : public std::enable_shared_from_this<Node>
         bool is_over() const;
         // Get amount of vists
         int get_n() const;
+        // Get move
+        chess::move get_move() const;
 
 
         static double WIN_SCORE;

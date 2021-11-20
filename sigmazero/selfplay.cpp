@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 	}
 
 	// load initial model
-	sigmanet model(0, 64, 25);
+	sigmanet model(0, 64, 13);
 
 	torch::Device device(torch::kCPU);
 	// For now only use CPU for self-play (overhead for single evaluation on GPU):
@@ -91,15 +91,15 @@ int main(int argc, char **argv)
 		chess::game game;
 		std::vector<torch::Tensor> images{};
 		std::vector<torch::Tensor> policies{};
-
-		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 256) // TODO: Check end
+		std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
+		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 100) // TODO: Check end
 		{
-			std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
+			//std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
 			auto evaluation = model->evaluate(game.get_position(), device);
 			main_node->explore_and_set_priors(evaluation);
 			main_node->add_exploration_noise(0.3, 0.25, generator);
 
-			for (int i = 0; i < 80; ++i)
+			for (int i = 0; i < 103; ++i)
 			{
 				std::shared_ptr<mcts::Node> current_node = main_node->traverse();
 				if (current_node->is_over())
@@ -118,8 +118,10 @@ int main(int argc, char **argv)
 
 			//std::cerr << "action dist " << torch::tensor(main_node->action_distribution()) << std::endl;
 			// next position
-			chess::move best_move = main_node->best_move();
+			main_node = main_node->best_child();
+			chess::move best_move = main_node->get_move();
 			std::cerr << "making move " << best_move.to_lan() << std::endl;
+			
 			game.push(best_move);
 		}
 

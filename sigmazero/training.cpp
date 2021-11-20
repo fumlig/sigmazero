@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 
 	// setup initial model
 	std::filesystem::path model_path(argv[1]);
-	sigmanet model(0, 64, 25);
+	sigmanet model(0, 64, 13);
 
 	if(std::filesystem::exists(model_path))
 	{
@@ -105,8 +105,8 @@ int main(int argc, char** argv)
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 1024;
-	const std::size_t batch_size = 256;
+	const std::size_t window_size = 256;
+	const std::size_t batch_size = 64;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;
