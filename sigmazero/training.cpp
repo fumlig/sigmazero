@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 
 	// setup initial model
 	std::filesystem::path model_path(argv[1]);
-	sigmanet model(0, 64, 10);
+	sigmanet model(0, 64, 25);
 
 	if(std::filesystem::exists(model_path))
 	{
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 	model->train();
 	model->to(device);
 	torch::optim::SGD optimizer(model->parameters(),
-    torch::optim::SGDOptions(0.2).momentum(0.9).weight_decay(0.0001)); // varying lr
+    torch::optim::SGDOptions(0.01).momentum(0.9).weight_decay(0.0001)); // varying lr
 
 
 	// statistics
@@ -105,8 +105,8 @@ int main(int argc, char** argv)
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 64;
-	const std::size_t batch_size = 16;
+	const std::size_t window_size = 1024;
+	const std::size_t batch_size = 256;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;

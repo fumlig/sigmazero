@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 	}
 
 	// load initial model
-	sigmanet model(0, 64, 10);
+	sigmanet model(0, 64, 25);
 
 	torch::Device device(torch::kCPU);
 	// For now only use CPU for self-play (overhead for single evaluation on GPU):
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 		std::vector<torch::Tensor> images{};
 		std::vector<torch::Tensor> policies{};
 
-		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 10) // TODO: Check end
+		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 256) // TODO: Check end
 		{
 			std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
 			auto evaluation = model->evaluate(game.get_position(), device);
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 			//std::cerr << "action dist " << torch::tensor(main_node->action_distribution()) << std::endl;
 			// next position
 			chess::move best_move = main_node->best_move();
-			// std::cerr << "making move " << best_move.to_lan() << std::endl;
+			std::cerr << "making move " << best_move.to_lan() << std::endl;
 			game.push(best_move);
 		}
 
