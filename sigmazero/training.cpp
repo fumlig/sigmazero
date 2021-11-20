@@ -76,13 +76,13 @@ int main(int argc, char** argv)
 		std::cerr << "saved initial model" << std::endl;
 		//std::cout << std::endl; // indicate that model has been updated
 	}
-
+	
 	// start receiving replays
 	std::vector<std::ifstream> replay_files(argv+2, argv+argc);
 	sync_queue<std::string> replay_queue;
 	std::thread replay_thread(receive_replays, std::ref(replay_files), std::ref(replay_queue));
 
-    // check cuda support
+	// check cuda support
 	torch::Device device(torch::kCPU);
     if(torch::cuda::is_available())
     {
@@ -150,7 +150,6 @@ int main(int argc, char** argv)
 			}
 
 			std::cerr << "selfplay result received" << std::endl;
-
 			received++;
 		}
 
@@ -159,7 +158,7 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
-
+		std::cerr << "training on window" << std::endl;
 		// remove old replays
 		torch::indexing::Slice window_slice(-window_size);
 
@@ -170,9 +169,9 @@ int main(int argc, char** argv)
 		// sample batch of replays
 		torch::Tensor batch_sample = torch::randint(window_size, {batch_size}).to(torch::kLong);
 
-		torch::Tensor batch_images = window_images.index({batch_sample});
-		torch::Tensor batch_values = window_values.index({batch_sample});
-		torch::Tensor batch_policies = window_policies.index({batch_sample});
+		torch::Tensor batch_images = window_images.index({batch_sample}).to(device);
+		torch::Tensor batch_values = window_values.index({batch_sample}).to(device);
+		torch::Tensor batch_policies = window_policies.index({batch_sample}).to(device);
 
 		//std::cerr << "batch ready" << std::endl;
 		// train on batch

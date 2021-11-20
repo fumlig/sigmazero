@@ -80,7 +80,7 @@ sigmanet_impl::sigmanet_impl(int history, int filters, int blocks) : history{his
 
 
 std::pair<torch::Tensor, torch::Tensor> sigmanet_impl::forward(torch::Tensor x) {
-
+    
     x = input_conv->forward(x);
     x = residual->forward(x);
 
@@ -92,9 +92,9 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet_impl::forward(torch::Tensor x) 
 
 // Assumes that model is in eval mode
 //TODO: Hash chess::move???????
-std::pair<double, std::unordered_map<size_t, double>> sigmanet_impl::evaluate(const chess::position& p)
+std::pair<double, std::unordered_map<size_t, double>> sigmanet_impl::evaluate(const chess::position& p, torch::Device device)
 {
-    auto[value, policy_logits] = forward(encode_input(p).unsqueeze(0));
+    auto[value, policy_logits] = forward(encode_input(p).unsqueeze(0).to(device));
     // policy now is a 4672x1 tensor of logits
     // Value is a 1x1 tensor of a policy
     return decode_output(policy_logits, value, p);

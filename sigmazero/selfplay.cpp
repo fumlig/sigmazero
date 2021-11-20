@@ -42,7 +42,22 @@ int main(int argc, char **argv)
 
 	// load initial model
 	sigmanet model(0, 64, 10);
+
+	torch::Device device(torch::kCPU);
+	// For now only use CPU for self-play (overhead for single evaluation on GPU):
+
+    // if(torch::cuda::is_available())
+    // {
+    //     device = torch::Device(torch::kCUDA);
+    //     std::cerr << "Using CUDA" << std::endl;
+    // }
+    // else
+	// {
+    //     std::cerr << "Using CPU" << std::endl;
+    // }
+
 	torch::load(model, model_path);
+	model->to(device);
 	model->eval();
 	model->zero_grad();
 	std::default_random_engine generator;
@@ -61,6 +76,7 @@ int main(int argc, char **argv)
 			try
 			{
 				torch::load(model, model_path);
+				model->to(device);
 				model_changed = model_write;
 				std::cerr << "updated model loaded" << std::endl;
 			}
@@ -76,10 +92,10 @@ int main(int argc, char **argv)
 		std::vector<torch::Tensor> images{};
 		std::vector<torch::Tensor> policies{};
 
-		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 2) // TODO: Check end
+		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 10) // TODO: Check end
 		{
 			std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
-			auto evaluation = model->evaluate(game.get_position());
+			auto evaluation = model->evaluate(game.get_position(), device);
 			main_node->explore_and_set_priors(evaluation);
 			main_node->add_exploration_noise(0.3, 0.25, generator);
 
@@ -91,25 +107,14 @@ int main(int argc, char **argv)
 					current_node->backpropagate(current_node->get_terminal_value()); //TODO: terminal value according to mate
 					continue;
 				}
-				evaluation = model->evaluate(current_node->get_state());
+				evaluation = model->evaluate(current_node->get_state(), device);
 				current_node->explore_and_set_priors(evaluation);
 			}
 			// todo: extract from position
 			images.push_back(model->encode_input(game.get_position()));
 			std::vector<double> action_dist = main_node->action_distribution();
-			for (double v: action_dist) {
-				if (v != 0) {
-					//std::cerr << "Not zero (selfplay) " << v << std::endl;
-				}
-			}
 			torch::Tensor action_tensor = torch::tensor(action_dist);
 			policies.push_back(action_tensor);
-			for (int i = 0; i < 64*73; i++) {
-				double v = action_tensor[i].item<double>();
-				if (v != 0) {
-					//std::cerr << "Not zero in tensor(selfplay) " << v << std::endl;
-				}
-			}
 
 			//std::cerr << "action dist " << torch::tensor(main_node->action_distribution()) << std::endl;
 			// next position
@@ -128,7 +133,7 @@ int main(int argc, char **argv)
 		{
 			terminal_value = 0;
 		}
-		for(int i = 0 ; i < game.size() ; ++i) {
+		for(size_t i = 0 ; i < game.size() ; ++i) {
 			torch::Tensor value = torch::tensor(i%2 == 0 ? terminal_value : -terminal_value);
 			std::cout << encode(images[i]) << ' ' << encode(value) << ' ' << encode(policies[i]) << std::endl; //according to side
 
