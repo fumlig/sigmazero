@@ -30,25 +30,13 @@ static torch::Tensor decode(const std::string& data)
 }
 
 
-static void receive_replays(std::vector<std::ifstream>& files, sync_queue<std::string>& queue)
+static void replay_receiver(std::istream& stream, sync_queue<std::string>& queue)
 {
-	std::vector<std::reference_wrapper<std::istream>> streams(files.begin(), files.end());
-
-	if(files.empty())
-	{
-		streams.push_back(std::cin);
-	}
-
-	std::cerr << "started replay thread with " << streams.size() << " sources" << std::endl;
-
 	while(true)
 	{
-		for(std::istream& stream: streams)
-		{
-			std::string replay;
-			std::getline(stream, replay);
-			queue.push(replay);
-		}
+		std::string replay;
+		std::getline(stream, replay);
+		queue.push(replay);
 	}
 }
 
@@ -77,10 +65,25 @@ int main(int argc, char** argv)
 		//std::cout << std::endl; // indicate that model has been updated
 	}
 	
-	// start receiving replays
+	// receive selfplay replays
 	std::vector<std::ifstream> replay_files(argv+2, argv+argc);
 	sync_queue<std::string> replay_queue;
-	std::thread replay_thread(receive_replays, std::ref(replay_files), std::ref(replay_queue));
+	std::vector<std::reference_wrapper<std::istream>> replay_streams(replay_files.begin(), replay_files.end());
+	std::vector<std::thread> replay_threads;
+
+	if(replay_streams.empty())
+	{
+		// fall back to stdin
+		replay_streams.push_back(std::cin);
+	}
+
+	std::cerr << "reading replays from " << replay_streams.size() << " streams" << std::endl;
+
+	for(std::istream& replay_stream: replay_streams)
+	{
+		// one thread per stream is ok since they will mostly be blocked
+		replay_threads.emplace_back(replay_receiver, std::ref(replay_stream), std::ref(replay_queue));
+	}
 
 	// check cuda support
 	torch::Device device(torch::kCPU);
@@ -189,7 +192,7 @@ int main(int argc, char** argv)
 		//std::cout << std::endl; // indicate that model has updated
 
 		// show statistics
-		// std::cerr << "received: " << received << ", consumed: " << consumed << std::endl;
+		std::cerr << "received: " << received << ", consumed: " << consumed << std::endl;
 	}
 
 	return 0;
