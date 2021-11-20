@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 			//std::cerr << "action dist " << torch::tensor(main_node->action_distribution()) << std::endl;
 			// next position
 			chess::move best_move = main_node->best_move();
-			std::cerr << "making move " << best_move.to_lan() << std::endl;
+			// std::cerr << "making move " << best_move.to_lan() << std::endl;
 			game.push(best_move);
 		}
 

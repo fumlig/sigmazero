@@ -149,7 +149,7 @@ int main(int argc, char** argv)
 				window_policies = torch::cat({window_policies, replay_policy}, 0);
 			}
 
-			std::cerr << "selfplay result received" << std::endl;
+			// std::cerr << "selfplay result received" << std::endl;
 			received++;
 		}
 
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
-		std::cerr << "training on window" << std::endl;
+		// std::cerr << "training on window" << std::endl;
 		// remove old replays
 		torch::indexing::Slice window_slice(-window_size);
 
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
 		//std::cout << std::endl; // indicate that model has updated
 
 		// show statistics
-		std::cerr << "received: " << received << ", consumed: " << consumed << std::endl;
+		// std::cerr << "received: " << received << ", consumed: " << consumed << std::endl;
 	}
 
 	return 0;
