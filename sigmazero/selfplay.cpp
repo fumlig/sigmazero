@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 		std::vector<torch::Tensor> images{};
 		std::vector<torch::Tensor> policies{};
 		std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
-		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 100) // TODO: Check end
+		while (!game.is_terminal() && game.size() <= 100) // TODO: Check end
 		{
 			//std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
 			auto evaluation = model->evaluate(game.get_position(), device);
@@ -126,20 +126,15 @@ int main(int argc, char **argv)
 		}
 
 		// send tensors
-		float terminal_value;
-		if(game.is_checkmate())
+		for(size_t i = 0 ; i < game.size() ; ++i)
 		{
-			terminal_value = game.get_position().get_turn() == chess::side_white ? -1 : 1;
-		}
-		else
-		{
-			terminal_value = 0;
-		}
-		for(size_t i = 0 ; i < game.size() ; ++i) {
-			torch::Tensor value = torch::tensor(i%2 == 0 ? terminal_value : -terminal_value);
-			std::cout << encode(images[i]) << ' ' << encode(value) << ' ' << encode(policies[i]) << std::endl; //according to side
+			std::optional<int> game_value = game.get_value(chess::ply_turn(i));
+			float terminal_value = game_value ? *game_value : 0.0f;
+			torch::Tensor value = torch::tensor(terminal_value);
 
+			std::cout << encode(images[i]) << ' ' << encode(value) << ' ' << encode(policies[i]) << std::endl; //according to side
 		}
+
 		std::cerr << "sent replay of size " << game.size() << std::endl;
 	}
 
