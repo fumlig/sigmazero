@@ -83,12 +83,6 @@ namespace mcts
             std::shared_ptr<Node> new_child = std::make_shared<Node>(child_state, false, weak_from_this(), child_move);
             new_child->prior = action_prob.second;
             new_child->action = action_prob.first;
-            if (new_child->is_over())
-            {
-                new_child->t = new_child->get_terminal_value();
-                new_child->is_terminal_node = true;
-                new_child->n = 1;
-            }
             children.push_back(new_child);
         }
     }
@@ -114,17 +108,14 @@ namespace mcts
         std::vector<double> UCB1_scores{};
         for (std::shared_ptr<Node> child : children)
         {
-            UCB1_scores.push_back(child->is_terminal_node ? 0.0 : child->UCB1());
+            UCB1_scores.push_back(child->UCB1());
         }
-        if(UCB1_scores.size() == 0) { // Needs to be here, otherwise segmentation fault
-            is_terminal_node = true;
-            return parent.lock() ? parent.lock()->traverse() : shared_from_this();
-        }
+        
         std::shared_ptr<Node> best_child = get_max_element<std::shared_ptr<Node>>(children.begin(), UCB1_scores.begin(), UCB1_scores.end());
 
         if (best_child->children.size() > 0)
         {
-            return best_child->children.front()->traverse();
+            return best_child->traverse();
         }
         else
         {
@@ -176,7 +167,7 @@ namespace mcts
     // Check if current state is a terminal state
     bool Node::is_over() const
     {
-        return is_terminal_node || state.is_checkmate() || state.is_stalemate();
+        return state.is_checkmate() || state.is_stalemate();
     }
 
     // Get amount of vists

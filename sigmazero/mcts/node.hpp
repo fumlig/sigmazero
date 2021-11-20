@@ -60,7 +60,6 @@ class Node : public std::enable_shared_from_this<Node>
 
     private:
 
-        bool is_terminal_node = false;
         double t = 0.0;
         int n = 0;
 
