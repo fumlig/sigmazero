@@ -20,6 +20,7 @@
 #include <mutex>
 #include <algorithm>
 #include <thread>
+#include <limits>
 
 #include <chess/chess.hpp>
 
@@ -38,7 +39,7 @@ struct identity
 enum class option_type
 {
 	check,
-	spin,
+	range,
 	combo,
 	button,
 	string
@@ -78,21 +79,24 @@ struct option_check: option
     bool value;
 };
 
-struct option_spin: option
+template<typename T>
+struct option_range: option
 {
-    option_spin(int default_value, int min, int max);
-    ~option_spin() = default;
+    option_range(T default_value, T min = 0, T max = std::numeric_limits<T>::infinity());
+    ~option_range() = default;
 
-    operator int() const;
+    operator T() const;
 
     void set(const std::string& new_value) override;
 
     void insert(std::ostream& out) const override;
 
-    int value;
-    int min;
-    int max;
+    T value;
+    T min;
+    T max;
 };
+
+using option_spin = option_range<int>;
 
 struct option_combo: option
 {
@@ -279,6 +283,39 @@ int main(engine& engine);
 
 }
 
+
+template <typename T>
+uci::option_range<T>::option_range(T default_value, T min, T max):
+option(uci::option_type::range),
+value{default_value},
+min{min},
+max{max}
+{}
+
+template <typename T>
+uci::option_range<T>::operator T() const
+{
+    return value;
+}
+
+template <typename T>
+void uci::option_range<T>::set(const std::string& new_value)
+{
+    int i = std::stoi(new_value);
+
+    if(i < min || i > max)
+    {
+        throw std::invalid_argument("spin option value out of range");
+    }
+
+    value = i;
+}
+
+template <typename T>
+void uci::option_range<T>::insert(std::ostream& out) const
+{
+    out << "type spin default " << value << " min " << min << " max " << max;
+}
 
 template<class T, class... Args> //requires std::derived_from<T, uci::option>
 void uci::options::add(const std::string& name, Args&&... args)

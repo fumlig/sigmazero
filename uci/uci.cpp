@@ -81,37 +81,6 @@ void option_check::insert(std::ostream& out) const
 }
 
 
-
-option_spin::option_spin(int default_value, int min, int max):
-option(option_type::spin),
-value{default_value},
-min{min},
-max{max}
-{}
-
-option_spin::operator int() const
-{
-    return value;
-}
-
-void option_spin::set(const std::string& new_value)
-{
-    int i = std::stoi(new_value);
-
-    if(i < min || i > max)
-    {
-        throw std::invalid_argument("spin option value out of range");
-    }
-
-    value = i;
-}
-
-void option_spin::insert(std::ostream& out) const
-{
-    out << "type spin default " << value << " min " << min << " max " << max;
-}
-
-
 option_combo::option_combo(std::string_view default_value, std::initializer_list<std::string> alternatives):
 option(option_type::combo),
 value{default_value},
