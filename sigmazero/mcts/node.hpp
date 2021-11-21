@@ -53,7 +53,8 @@ class Node : public std::enable_shared_from_this<Node>
         int get_n() const;
         // Get move
         chess::move get_move() const;
-
+        // Set if node is parent node
+        void make_start_node();
 
         static double WIN_SCORE;
         static double DRAW_SCORE;

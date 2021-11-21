@@ -119,6 +119,7 @@ int main(int argc, char **argv)
 			//std::cerr << "action dist " << torch::tensor(main_node->action_distribution()) << std::endl;
 			// next position
 			main_node = main_node->best_child();
+			main_node->make_start_node();
 			chess::move best_move = main_node->get_move();
 			std::cerr << "making move " << best_move.to_lan() << std::endl;
 			
