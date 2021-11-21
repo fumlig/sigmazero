@@ -23,6 +23,12 @@ private:
     chess::game game;
     std::shared_ptr<mcts::Node> node;
 
+    // would be nice to have these as UCI options but clients crash with floats
+    float dirichlet_alpha = 0.3f;
+    float exploration_fraction = 0.25f;
+    float pb_c_base = 19652.0f;
+    float pb_c_init = 1.25f;
+
 public:
     sigmazero(const std::filesystem::path& model_path):
     model(0, 64, 13),
@@ -47,12 +53,6 @@ public:
         opt.add<uci::option_spin>("Move Overhead", 0, 0, 1);
         opt.add<uci::option_spin>("Threads", 1, 1, 1);
         opt.add<uci::option_spin>("Hash", 1, 1, 1);
-
-        opt.add<uci::option_range<unsigned>>("Sampling Moves", 30);
-        opt.add<uci::option_range<float>>("Dirichlet Alpha", 0.3f, 0.0f, 1.0f);
-        opt.add<uci::option_range<float>>("Exploration Fraction", 0.25f, 0.0f, 1.0f);
-        opt.add<uci::option_range<float>>("PB C Base", 19652.0f);
-        opt.add<uci::option_range<float>>("PB C Init", 1.25f);
     }
 
     ~sigmazero()
@@ -93,16 +93,11 @@ public:
 
         info.message("budgeted time: " + std::to_string(budgeted_time));
 
-        float dirichlet_alpha = opt.get<uci::option_range<float>>("Dirichlet Alpha");
-        float exploration_fraction = opt.get<uci::option_range<float>>("Exploration Fraction");
-
-        mcts::Node::pb_c_base = opt.get<uci::option_range<float>>("PB C Base");
-        mcts::Node::pb_c_init = opt.get<uci::option_range<float>>("PB C Init");
+        mcts::Node::pb_c_base = pb_c_base;
+        mcts::Node::pb_c_init = pb_c_init;
 
         auto evaluation = model->evaluate(game.get_position(), device);
         
-        info.message("passed evaluate");
-
         node->explore_and_set_priors(evaluation);
         node->add_exploration_noise(dirichlet_alpha, exploration_fraction, generator);
 
