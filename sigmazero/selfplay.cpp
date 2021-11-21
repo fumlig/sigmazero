@@ -61,6 +61,7 @@ int main(int argc, char **argv)
 	model->eval();
 	model->zero_grad();
 	std::default_random_engine generator;
+	generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
 	std::cerr << "loaded model" << std::endl;
 
 	auto model_changed = std::filesystem::last_write_time(model_path);
