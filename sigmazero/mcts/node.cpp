@@ -183,6 +183,10 @@ namespace mcts
     {
         return n != 0 ? t / n : -100;
     }
+    void Node::make_start_node() 
+    {
+        is_start_node = true;
+    }
 
     double Node::WIN_SCORE = 1.0;
     double Node::DRAW_SCORE = 0.0;
