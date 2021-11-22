@@ -13,6 +13,7 @@
 #include <functional>
 #include <vector>
 #include <queue>
+#include <iomanip>
 
 #include <chess/chess.hpp>
 #include <torch/torch.h>
@@ -117,6 +118,12 @@ int main(int argc, char** argv)
 	torch::Tensor window_values;
 	torch::Tensor window_policies;
 
+	const unsigned save_rate = 16;			// save after this number of batches
+	const unsigned checkpoint_rate = 256;	// checkpoint after this number of saves
+
+	unsigned batches_since_save = 0;
+	unsigned saves_since_checkpoint = 0;
+
 	bool first_replay = true;
 
 	// start training
@@ -197,7 +204,29 @@ int main(int argc, char** argv)
 		consumed += batch_size;
 
 		// update model
-		torch::save(model, model_path);
+		if(++batches_since_save == save_rate)
+		{
+			batches_since_save = 0;
+			
+			torch::save(model, model_path);
+			std::cerr << "saved model " << model_path << std::endl;
+
+			if(++saves_since_checkpoint == checkpoint_rate)
+			{
+				saves_since_checkpoint = 0;
+
+				auto now = std::chrono::system_clock::now();
+ 				const std::time_t t_c = std::chrono::system_clock::to_time_t(now);
+				std::ostringstream out;
+				out << "ckpt_" << std::put_time(std::localtime(&t_c), "%FT%T") << ".pt";
+				
+				std::filesystem::path checkpoint_path = out.str();
+				std::filesystem::copy_file(model_path, checkpoint_path);
+				
+				std::cerr << "saved checkpoint " << checkpoint_path << std::endl;
+			}
+		}
+
 		//std::cout << std::endl; // indicate that model has updated
 
 		// show statistics
