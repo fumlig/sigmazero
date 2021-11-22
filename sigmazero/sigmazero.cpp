@@ -16,9 +16,6 @@ class sigmazero: public uci::engine
 private:
     sigmanet model;
     torch::Device device;
-
-    std::random_device random;
-    std::default_random_engine generator;
     
     chess::game game;
     std::shared_ptr<mcts::Node> node;
@@ -31,8 +28,6 @@ public:
     uci::engine(),
     model(0, 64, 13),
     device(torch::kCPU),
-    random(),
-    generator(random()),
     game(),
     node(),
     pb_c_base{opt.add<uci::option_float>("PB C Base", 19652.0f).ref()},
