@@ -304,9 +304,8 @@ void uci::option_value<T>::set(const std::string& new_value)
 template <typename T>
 void uci::option_value<T>::insert(std::ostream& out) const
 {
-    out << "type string default " << std::to_string(value);
+    out << "type string default " << value;
 }
-
 
 template<class T, class... Args> //requires std::derived_from<T, uci::option>
 const T& uci::options::add(const std::string& name, Args&&... args)

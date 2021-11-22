@@ -32,7 +32,6 @@ model=model.pt
 Olympen example:
 
 ```bash
-user=$(whoami)
 repo=~/tjack
 model=~/sigmazero.pt
 training=$repo/build/training
@@ -40,7 +39,7 @@ selfplay=$repo/build/selfplay
 
 function command {
 	id=$1
-	echo "ssh $user@olympen1-$id.ad.liu.se $selfplay $model"
+	echo "ssh olympen1-$id.ad.liu.se $selfplay $model"
 }
 
 $training $model <($(command 101)) <($(command 102)) <($(command 103))

@@ -12,6 +12,7 @@
 #include <thread>
 #include <functional>
 #include <vector>
+#include <queue>
 
 #include <chess/chess.hpp>
 #include <torch/torch.h>
@@ -24,9 +25,9 @@
 static torch::Tensor decode(const std::string& data)
 {
     torch::Tensor tensor;
-	std::istringstream stream(base64_decode(data));
-	torch::load(tensor, stream);
-	return tensor;
+    std::istringstream stream(base64_decode(data));
+    torch::load(tensor, stream);
+    return tensor;
 }
 
 
@@ -70,6 +71,7 @@ int main(int argc, char** argv)
 	sync_queue<std::string> replay_queue;
 	std::vector<std::reference_wrapper<std::istream>> replay_streams(replay_files.begin(), replay_files.end());
 	std::vector<std::thread> replay_threads;
+	std::queue<std::chrono::time_point<std::chrono::steady_clock>> replay_timestamps;
 
 	if(replay_streams.empty())
 	{
@@ -125,6 +127,7 @@ int main(int argc, char** argv)
 		while(replay_queue.size())
 		{
 			std::string replay = replay_queue.pop();
+			replay_timestamps.push(std::chrono::steady_clock::now());
 
 			std::string encoded_image;
 			std::string encoded_value;
@@ -169,6 +172,12 @@ int main(int argc, char** argv)
 		window_values = window_values.index({window_slice});
 		window_policies = window_policies.index({window_slice});
 
+		// remove old timestamps
+		while(replay_timestamps.size() > window_size)
+		{
+			replay_timestamps.pop();
+		}
+
 		// sample batch of replays
 		torch::Tensor batch_sample = torch::randint(window_size, {batch_size}).to(torch::kLong);
 
@@ -192,7 +201,8 @@ int main(int argc, char** argv)
 		//std::cout << std::endl; // indicate that model has updated
 
 		// show statistics
-		std::cerr << "received: " << received << ", consumed: " << consumed << std::endl;
+		std::chrono::duration<float> window_duration = replay_timestamps.back() - replay_timestamps.front();
+		std::cerr << "received: " << received << ", consumed: " << consumed << ", rate: " << window_size/window_duration.count() << std::endl;
 	}
 
 	return 0;
