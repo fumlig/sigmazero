@@ -128,6 +128,7 @@ namespace mcts
     std::shared_ptr<Node> Node::best_child() const
     {
         std::vector<size_t> num_visits{};
+        if (children.size() == 0) return std::shared_ptr<Node>();
         for (std::shared_ptr<Node> child : children)
         {
             num_visits.push_back(child->n);
