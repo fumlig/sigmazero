@@ -60,8 +60,7 @@ int main(int argc, char **argv)
 	model->to(device);
 	model->eval();
 	model->zero_grad();
-	std::default_random_engine generator;
-	generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
+
 	std::cerr << "loaded model" << std::endl;
 
 	auto model_changed = std::filesystem::last_write_time(model_path);
@@ -98,7 +97,7 @@ int main(int argc, char **argv)
 			//std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
 			auto evaluation = model->evaluate(game.get_position(), device);
 			main_node->explore_and_set_priors(evaluation);
-			main_node->add_exploration_noise(0.3, 0.25, generator);
+			main_node->add_exploration_noise(0.3, 0.25);
 
 			for (int i = 0; i < 103; ++i)
 			{

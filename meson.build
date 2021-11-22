@@ -90,7 +90,8 @@ sigmazero_src = [
 	'sigmazero/sigmazero.cpp',
 	'sigmazero/drl/sigmanet.cpp',
 	'sigmazero/drl/action_encodings.cpp',
-	'sigmazero/mcts/node.cpp'
+	'sigmazero/mcts/node.cpp',
+	'sigmazero/util.cpp'
 ]
 
 sigmazero = executable(

@@ -3,6 +3,7 @@
 #include "node.hpp"
 #include <chess/chess.hpp>
 #include <sigmazero/drl/action_encodings.hpp>
+#include <sigmazero/util.hpp>
 #include <random>
 #include <vector>
 #include <iostream>
@@ -92,12 +93,12 @@ namespace mcts
         backpropagate(evaluation.first);
     }
 
-    void Node::add_exploration_noise(double dirichlet_alpha, double exploration_factor, std::default_random_engine generator)
+    void Node::add_exploration_noise(double dirichlet_alpha, double exploration_factor)
     {
         std::gamma_distribution<double> gamma_distribution(dirichlet_alpha, 1.0);
         for (std::shared_ptr<Node> child : children)
         {
-            double noise = gamma_distribution(generator);
+            double noise = gamma_distribution(get_generator());
             child->prior = child->prior * (1 - exploration_factor) + exploration_factor * noise;
         }
     }

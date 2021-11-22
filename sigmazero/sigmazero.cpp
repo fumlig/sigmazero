@@ -16,9 +16,6 @@ class sigmazero: public uci::engine
 private:
     sigmanet model;
     torch::Device device;
-
-    std::random_device random;
-    std::default_random_engine generator;
     
     chess::game game;
     std::shared_ptr<mcts::Node> node;
@@ -33,8 +30,6 @@ public:
     sigmazero(const std::filesystem::path& model_path):
     model(0, 64, 13),
     device(torch::kCPU),
-    random(),
-    generator(random()),
     game(),
     node()
     {
@@ -99,7 +94,7 @@ public:
         auto evaluation = model->evaluate(game.get_position(), device);
         
         node->explore_and_set_priors(evaluation);
-        node->add_exploration_noise(dirichlet_alpha, exploration_fraction, generator);
+        node->add_exploration_noise(dirichlet_alpha, exploration_fraction);
 
         unsigned simulations = 0;
 
