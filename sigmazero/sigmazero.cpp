@@ -23,20 +23,20 @@ private:
     chess::game game;
     std::shared_ptr<mcts::Node> node;
 
-    // would be nice to have these as UCI options but clients crash with floats
-    float dirichlet_alpha = 0.3f;
-    float exploration_fraction = 0.25f;
-    float pb_c_base = 19652.0f;
-    float pb_c_init = 1.25f;
+    const float& pb_c_base;
+    const float& pb_c_init;
 
 public:
     sigmazero(const std::filesystem::path& model_path):
+    uci::engine(),
     model(0, 64, 13),
     device(torch::kCPU),
     random(),
     generator(random()),
     game(),
-    node()
+    node(),
+    pb_c_base{opt.add<uci::option_float>("PB C Base", 19652.0f).ref()},
+    pb_c_init{opt.add<uci::option_float>("PB C Init", 1.25f).ref()}
     {
         torch::load(model, model_path);
 
@@ -48,11 +48,6 @@ public:
         model->to(device);
         model->eval();
         model->zero_grad();
-
-        opt.add<uci::option_spin>("MultiPV", 1, 1, 1);
-        opt.add<uci::option_spin>("Move Overhead", 0, 0, 1);
-        opt.add<uci::option_spin>("Threads", 1, 1, 1);
-        opt.add<uci::option_spin>("Hash", 1, 1, 1);
     }
 
     ~sigmazero()
@@ -99,7 +94,6 @@ public:
         auto evaluation = model->evaluate(game.get_position(), device);
         
         node->explore_and_set_priors(evaluation);
-        node->add_exploration_noise(dirichlet_alpha, exploration_fraction, generator);
 
         unsigned simulations = 0;
 
@@ -144,8 +138,17 @@ public:
             info.depth(simulations);
         }
 
-        chess::move best = node->best_child()->get_move();
-        chess::move ponder_move = node->best_child()->best_child()->get_move();
+        chess::move best, ponder_move;
+        
+        if(node->best_child())
+        {
+            best = node->best_child()->get_move();
+        
+            if(node->best_child()->best_child())
+            {
+                ponder_move = node->best_child()->best_child()->get_move();
+            }
+        }
 
         return {best, ponder_move};
     }

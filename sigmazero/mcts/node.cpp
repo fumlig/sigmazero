@@ -86,6 +86,7 @@ namespace mcts
             children.push_back(new_child);
         }
     }
+
     void Node::explore_and_set_priors(const std::pair<double, std::unordered_map<size_t, double>>& evaluation)
     {
         expand(evaluation.second);
