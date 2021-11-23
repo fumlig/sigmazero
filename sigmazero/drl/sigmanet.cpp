@@ -101,6 +101,29 @@ std::pair<double, std::unordered_map<size_t, double>> sigmanet_impl::evaluate(co
     // !IMPORTANT: when passing values to network, pass according to player side
 }
 
+std::vector<std::pair<double, std::unordered_map<size_t, double>>> sigmanet_impl::evaluate_batch(const std::vector<chess::position>& positions, torch::Device device)
+{
+    using namespace torch::indexing;
+
+    int batch_size = positions.size();
+    std::vector<torch::Tensor> encoded_inputs;
+
+    for (auto& position : positions) {
+        encoded_inputs.push_back(encode_input(position));
+    }
+
+    torch::Tensor batch = torch::stack(encoded_inputs, 0).to(device);
+    auto[value, policy] = forward(batch);
+    // std::cerr << "batch shape:" << batch.sizes() << ", value shape: " << value.sizes() << " , policy shape: " << policy.sizes() << std::endl;
+    std::vector<std::pair<double, std::unordered_map<size_t, double>>> result;
+
+    for (int i = 0; i < batch_size; i++) {
+        result.push_back(decode_output(policy.index({i, "..."}), value.index({i, "..."}), positions[i]));
+    }
+
+    return result;
+}
+
 std::pair<double, std::unordered_map<size_t, double>> sigmanet_impl::decode_output(const torch::Tensor& policy, torch::Tensor value, const chess::position& p) const {
     return std::make_pair(value.item<double>(), valid_policy_probabilities(policy, p));
 }
@@ -115,7 +138,7 @@ std::unordered_map<size_t, double> sigmanet_impl::valid_policy_probabilities(con
         size_t a = action_encodings::action_from_move(move);
         // Normalize to white perspective if is black
         a = action_encodings::cond_flip_action(state, a);
-        double value = policy_logits[0][a].item<double>();
+        double value = policy_logits.squeeze()[a].item<double>();
         policy_probabilities[a] = std::exp(value);
         exp_sum += policy_probabilities[a];
     }

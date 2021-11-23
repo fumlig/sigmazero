@@ -57,8 +57,8 @@ public:
     Map policy head indices to valid chess::moves
     Pass to node
     */
-    std::pair<double, std::unordered_map<size_t, double>> evaluate(const chess::position& p, torch::Device device); //TODO
-
+    std::pair<double, std::unordered_map<size_t, double>> evaluate(const chess::position& p, torch::Device device);
+    std::vector<std::pair<double, std::unordered_map<size_t, double>>> evaluate_batch(const std::vector<chess::position>& positions, torch::Device device);
     std::unordered_map<size_t, double> valid_policy_probabilities(const torch::Tensor& policy_logits, const chess::position& state) const;
 
     int get_input_channels() const;
