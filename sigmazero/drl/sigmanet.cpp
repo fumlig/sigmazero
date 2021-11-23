@@ -113,6 +113,8 @@ std::unordered_map<size_t, double> sigmanet_impl::valid_policy_probabilities(con
     double exp_sum = 0.0;
     for (chess::move move: legal_moves) {
         size_t a = action_encodings::action_from_move(move);
+        // Normalize to white perspective if is black
+        a = action_encodings::cond_flip_action(state, a);
         double value = policy_logits[0][a].item<double>();
         policy_probabilities[a] = std::exp(value);
         exp_sum += policy_probabilities[a];
