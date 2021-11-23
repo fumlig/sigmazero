@@ -65,27 +65,22 @@ int main(int argc, char **argv)
 	// Sätt till 1.0 för att stänga av fast playouts
 	double full_search_prob = 0.25;
 	
-	int full_search_iterations = 80;
-	int fast_search_iterations = 80;
+	int full_search_iterations = 800;
+	int fast_search_iterations = 100;
 
 	std::bernoulli_distribution search_type_dist(full_search_prob);
 
 	int model_check_counter = 0;
 	int model_update_int = 100;
 
-	// with 600 iterations:
-	// 1 worker: ~1 second
-	// 8 workers: ~4 seconds 
-	// 32 workers: ~15 seconds
-	// 64 workers: ~31 seconds
-	// 256 workers: ~128 seconds
-	int batch_size = 1;
+
+	int batch_size = 256;
 	
 	std::vector<selfplay_worker> workers(batch_size);
 
 	while (true)
 	{
-		// Load every 100 iterations
+		// Load the newest model every 100 iterations
 		if(++model_check_counter == model_update_int)
 		{
 			model_check_counter = 0;
@@ -135,7 +130,6 @@ int main(int argc, char **argv)
 				std::optional<chess::position> traversed_position = workers[worker_idx].traverse();
 				if(!traversed_position)
 				{
-					// maybe remove? or not
 					position_mask[worker_idx] = false;
 					continue;
 				}
@@ -153,7 +147,7 @@ int main(int argc, char **argv)
 		// Make the best moves
 		for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx)
 		{
-			chess::move move = workers[worker_idx].make_best_move(model->encode_input(workers[worker_idx].get_position()), true);
+			chess::move move = workers[worker_idx].make_best_move(model->encode_input(workers[worker_idx].get_position()), do_full_search);
 			std::cerr << "Worker " << worker_idx << " made move " << move.to_lan() << std::endl;
 			
 			// Output game and reset worker

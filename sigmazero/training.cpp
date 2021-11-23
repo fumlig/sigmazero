@@ -111,8 +111,8 @@ int main(int argc, char** argv)
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 64;
-	const std::size_t batch_size = 16;
+	const std::size_t window_size = 256;
+	const std::size_t batch_size = 64;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;
@@ -145,8 +145,7 @@ int main(int argc, char** argv)
 			torch::Tensor replay_image = decode(encoded_image).unsqueeze(0);
 			torch::Tensor replay_value = decode(encoded_value).unsqueeze(0);
 			torch::Tensor replay_policy = decode(encoded_policy).unsqueeze(0);
-			
-			//std::cerr << replay_policy << std::endl;
+		
 			
 			if(first_replay)
 			{
@@ -161,8 +160,6 @@ int main(int argc, char** argv)
 				window_values = torch::cat({window_values, replay_value}, 0);
 				window_policies = torch::cat({window_policies, replay_policy}, 0);
 			}
-
-			// std::cerr << "selfplay result received" << std::endl;
 			received++;
 		}
 
@@ -171,7 +168,6 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
-		// std::cerr << "training on window" << std::endl;
 		// remove old replays
 		torch::indexing::Slice window_slice(-window_size);
 
