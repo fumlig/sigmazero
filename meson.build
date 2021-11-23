@@ -95,7 +95,7 @@ sigmazero_src = [
 
 sigmazero = executable(
 	'sigmazero',
-	sigmazero_src + 'sigmazero/sigmazero.cpp',
+	sigmazero_src + ['sigmazero/sigmazero.cpp'],
 	dependencies : [libchess_dep, uci_dep, thread_dep, torch_dep]
 )
 
