@@ -13,6 +13,7 @@
 #include "drl/sigmanet.hpp"
 #include "mcts/node.hpp"
 #include "base64.hpp"
+#include "util.hpp"
 
 static std::string encode(const torch::Tensor &tensor)
 {
@@ -41,7 +42,7 @@ int main(int argc, char **argv)
 	}
 
 	// load initial model
-	sigmanet model(0, 64, 10);
+	sigmanet model(0, 64, 13);
 
 	torch::Device device(torch::kCPU);
 	// For now only use CPU for self-play (overhead for single evaluation on GPU):
@@ -60,12 +61,20 @@ int main(int argc, char **argv)
 	model->to(device);
 	model->eval();
 	model->zero_grad();
-	std::default_random_engine generator;
+
 	std::cerr << "loaded model" << std::endl;
 
 	auto model_changed = std::filesystem::last_write_time(model_path);
 
 	std::cerr << "started with model " << model_path << std::endl;
+
+	// Sätt till 1.0 för att stänga av fast playouts
+	double full_search_prob = 0.25;
+	
+	int full_search_iterations = 600;
+	int fast_search_iterations = 100;
+
+	std::bernoulli_distribution search_type_dist(full_search_prob);
 
 	while (true)
 	{
@@ -91,15 +100,20 @@ int main(int argc, char **argv)
 		chess::game game;
 		std::vector<torch::Tensor> images{};
 		std::vector<torch::Tensor> policies{};
+		std::vector<chess::side> players{};
 
-		while (!game.is_checkmate() && !game.is_stalemate() && game.size() <= 10) // TODO: Check end
+		std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
+		while (!game.is_terminal() && game.size() <= 100) // TODO: Check end
 		{
-			std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
+			//std::shared_ptr<mcts::Node> main_node{std::make_shared<mcts::Node>(game.get_position())};
 			auto evaluation = model->evaluate(game.get_position(), device);
 			main_node->explore_and_set_priors(evaluation);
-			main_node->add_exploration_noise(0.3, 0.25, generator);
+			main_node->add_exploration_noise(0.3, 0.25);
 
-			for (int i = 0; i < 80; ++i)
+			bool do_full_search = search_type_dist(get_generator());
+			int iters = do_full_search ? full_search_iterations : fast_search_iterations;
+
+			for (int i = 0; i < iters; ++i)
 			{
 				std::shared_ptr<mcts::Node> current_node = main_node->traverse();
 				if (current_node->is_over())
@@ -110,35 +124,40 @@ int main(int argc, char **argv)
 				evaluation = model->evaluate(current_node->get_state(), device);
 				current_node->explore_and_set_priors(evaluation);
 			}
-			// todo: extract from position
-			images.push_back(model->encode_input(game.get_position()));
-			std::vector<double> action_dist = main_node->action_distribution();
-			torch::Tensor action_tensor = torch::tensor(action_dist);
-			policies.push_back(action_tensor);
+
+			// Save move as training data if full search was done
+			if (do_full_search) {
+				
+				// todo: extract from position
+				images.push_back(model->encode_input(game.get_position()));
+				std::vector<double> action_dist = main_node->action_distribution();
+				torch::Tensor action_tensor = torch::tensor(action_dist);
+				policies.push_back(action_tensor);
+				players.push_back(game.get_position().get_turn());
+			}
+
 
 			//std::cerr << "action dist " << torch::tensor(main_node->action_distribution()) << std::endl;
 			// next position
-			chess::move best_move = main_node->best_move();
-			// std::cerr << "making move " << best_move.to_lan() << std::endl;
+			main_node = main_node->best_child();
+			main_node->make_start_node();
+			chess::move best_move = main_node->get_move();
+			std::cerr << "making move " << best_move.to_lan() << std::endl;
+			
 			game.push(best_move);
 		}
 
 		// send tensors
-		float terminal_value;
-		if(game.is_checkmate())
+		for(size_t i = 0 ; i < images.size(); ++i)
 		{
-			terminal_value = game.get_position().get_turn() == chess::side_white ? -1 : 1;
-		}
-		else
-		{
-			terminal_value = 0;
-		}
-		for(size_t i = 0 ; i < game.size() ; ++i) {
-			torch::Tensor value = torch::tensor(i%2 == 0 ? terminal_value : -terminal_value);
-			std::cout << encode(images[i]) << ' ' << encode(value) << ' ' << encode(policies[i]) << std::endl; //according to side
+			std::optional<int> game_value = game.get_value(players[i]);
+			float terminal_value = game_value ? *game_value : 0.0f;
+			torch::Tensor value = torch::tensor(terminal_value);
 
+			std::cout << encode(images[i]) << ' ' << encode(value) << ' ' << encode(policies[i]) << std::endl; //according to side
 		}
-		std::cerr << "sent replay of size " << game.size() << std::endl;
+
+		std::cerr << "sent replay of size " << images.size() << std::endl;
 	}
 
 	return 0;

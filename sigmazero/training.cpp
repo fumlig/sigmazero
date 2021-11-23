@@ -12,6 +12,8 @@
 #include <thread>
 #include <functional>
 #include <vector>
+#include <queue>
+#include <iomanip>
 
 #include <chess/chess.hpp>
 #include <torch/torch.h>
@@ -24,31 +26,19 @@
 static torch::Tensor decode(const std::string& data)
 {
     torch::Tensor tensor;
-	std::istringstream stream(base64_decode(data));
-	torch::load(tensor, stream);
-	return tensor;
+    std::istringstream stream(base64_decode(data));
+    torch::load(tensor, stream);
+    return tensor;
 }
 
 
-static void receive_replays(std::vector<std::ifstream>& files, sync_queue<std::string>& queue)
+static void replay_receiver(std::istream& stream, sync_queue<std::string>& queue)
 {
-	std::vector<std::reference_wrapper<std::istream>> streams(files.begin(), files.end());
-
-	if(files.empty())
-	{
-		streams.push_back(std::cin);
-	}
-
-	std::cerr << "started replay thread with " << streams.size() << " sources" << std::endl;
-
 	while(true)
 	{
-		for(std::istream& stream: streams)
-		{
-			std::string replay;
-			std::getline(stream, replay);
-			queue.push(replay);
-		}
+		std::string replay;
+		std::getline(stream, replay);
+		queue.push(replay);
 	}
 }
 
@@ -63,7 +53,7 @@ int main(int argc, char** argv)
 
 	// setup initial model
 	std::filesystem::path model_path(argv[1]);
-	sigmanet model(0, 64, 10);
+	sigmanet model(0, 64, 13);
 
 	if(std::filesystem::exists(model_path))
 	{
@@ -77,10 +67,26 @@ int main(int argc, char** argv)
 		//std::cout << std::endl; // indicate that model has been updated
 	}
 	
-	// start receiving replays
+	// receive selfplay replays
 	std::vector<std::ifstream> replay_files(argv+2, argv+argc);
 	sync_queue<std::string> replay_queue;
-	std::thread replay_thread(receive_replays, std::ref(replay_files), std::ref(replay_queue));
+	std::vector<std::reference_wrapper<std::istream>> replay_streams(replay_files.begin(), replay_files.end());
+	std::vector<std::thread> replay_threads;
+	std::queue<std::chrono::time_point<std::chrono::steady_clock>> replay_timestamps;
+
+	if(replay_streams.empty())
+	{
+		// fall back to stdin
+		replay_streams.push_back(std::cin);
+	}
+
+	std::cerr << "reading replays from " << replay_streams.size() << " streams" << std::endl;
+
+	for(std::istream& replay_stream: replay_streams)
+	{
+		// one thread per stream is ok since they will mostly be blocked
+		replay_threads.emplace_back(replay_receiver, std::ref(replay_stream), std::ref(replay_queue));
+	}
 
 	// check cuda support
 	torch::Device device(torch::kCPU);
@@ -97,7 +103,7 @@ int main(int argc, char** argv)
 	model->train();
 	model->to(device);
 	torch::optim::SGD optimizer(model->parameters(),
-    torch::optim::SGDOptions(0.2).momentum(0.9).weight_decay(0.0001)); // varying lr
+    torch::optim::SGDOptions(0.01).momentum(0.9).weight_decay(0.0001)); // varying lr
 
 
 	// statistics
@@ -105,12 +111,18 @@ int main(int argc, char** argv)
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 64;
-	const std::size_t batch_size = 16;
+	const std::size_t window_size = 256;
+	const std::size_t batch_size = 64;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;
 	torch::Tensor window_policies;
+
+	const unsigned save_rate = 16;			// save after this number of batches
+	const unsigned checkpoint_rate = 256;	// checkpoint after this number of saves
+
+	unsigned batches_since_save = 0;
+	unsigned saves_since_checkpoint = 0;
 
 	bool first_replay = true;
 
@@ -122,6 +134,7 @@ int main(int argc, char** argv)
 		while(replay_queue.size())
 		{
 			std::string replay = replay_queue.pop();
+			replay_timestamps.push(std::chrono::steady_clock::now());
 
 			std::string encoded_image;
 			std::string encoded_value;
@@ -166,6 +179,12 @@ int main(int argc, char** argv)
 		window_values = window_values.index({window_slice});
 		window_policies = window_policies.index({window_slice});
 
+		// remove old timestamps
+		while(replay_timestamps.size() > window_size)
+		{
+			replay_timestamps.pop();
+		}
+
 		// sample batch of replays
 		torch::Tensor batch_sample = torch::randint(window_size, {batch_size}).to(torch::kLong);
 
@@ -185,11 +204,34 @@ int main(int argc, char** argv)
 		consumed += batch_size;
 
 		// update model
-		torch::save(model, model_path);
+		if(++batches_since_save == save_rate)
+		{
+			batches_since_save = 0;
+			
+			torch::save(model, model_path);
+			std::cerr << "saved model " << model_path << std::endl;
+
+			if(++saves_since_checkpoint == checkpoint_rate)
+			{
+				saves_since_checkpoint = 0;
+
+				auto now = std::chrono::system_clock::now();
+ 				const std::time_t t_c = std::chrono::system_clock::to_time_t(now);
+				std::ostringstream out;
+				out << "ckpt_" << std::put_time(std::localtime(&t_c), "%FT%T") << ".pt";
+				
+				std::filesystem::path checkpoint_path = out.str();
+				std::filesystem::copy_file(model_path, checkpoint_path);
+				
+				std::cerr << "saved checkpoint " << checkpoint_path << std::endl;
+			}
+		}
+
 		//std::cout << std::endl; // indicate that model has updated
 
 		// show statistics
-		// std::cerr << "received: " << received << ", consumed: " << consumed << std::endl;
+		std::chrono::duration<float> window_duration = replay_timestamps.back() - replay_timestamps.front();
+		std::cerr << "received: " << received << ", consumed: " << consumed << ", rate: " << window_size/window_duration.count() << std::endl;
 	}
 
 	return 0;

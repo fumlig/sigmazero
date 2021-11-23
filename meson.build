@@ -90,11 +90,12 @@ sigmazero_src = [
 	'sigmazero/drl/sigmanet.cpp',
 	'sigmazero/drl/action_encodings.cpp',
 	'sigmazero/mcts/node.cpp',
+	'sigmazero/util.cpp'
 ]
 
 sigmazero = executable(
 	'sigmazero',
-	sigmazero_src,
+	sigmazero_src + 'sigmazero/sigmazero.cpp',
 	dependencies : [libchess_dep, uci_dep, thread_dep, torch_dep]
 )
 
@@ -107,15 +108,5 @@ training = executable(
 selfplay = executable(
 	'selfplay',
 	['sigmazero/selfplay.cpp', 'sigmazero/base64.cpp'] + sigmazero_src,
-	dependencies : [libchess_dep, torch_dep]
-)
-
-sigmanet = executable(
-	'sigmanet',
-	[
-		'sigmazero/drl/sigmanet.cpp',
-		'sigmazero/drl/sigma_test.cpp',
-		'sigmazero/drl/action_encodings.cpp',
-	],
 	dependencies : [libchess_dep, torch_dep]
 )

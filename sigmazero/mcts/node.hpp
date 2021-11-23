@@ -27,7 +27,7 @@ class Node : public std::enable_shared_from_this<Node>
         // Expand node
         void expand(const std::unordered_map<size_t, double>& action_probabilities);
         void explore_and_set_priors(const std::pair<double, std::unordered_map<size_t, double>>& evaluation);
-        void add_exploration_noise(double dirichlet_alpha, double exploration_factor, std::default_random_engine generator);
+        void add_exploration_noise(double dirichlet_alpha, double exploration_factor);
         double get_value() const;
         double get_terminal_value() const;
 
@@ -51,7 +51,10 @@ class Node : public std::enable_shared_from_this<Node>
         bool is_over() const;
         // Get amount of vists
         int get_n() const;
-
+        // Get move
+        chess::move get_move() const;
+        // Set if node is parent node
+        void make_start_node();
 
         static double WIN_SCORE;
         static double DRAW_SCORE;

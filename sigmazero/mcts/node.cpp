@@ -3,6 +3,7 @@
 #include "node.hpp"
 #include <chess/chess.hpp>
 #include <sigmazero/drl/action_encodings.hpp>
+#include <sigmazero/util.hpp>
 #include <random>
 #include <vector>
 #include <iostream>
@@ -91,18 +92,19 @@ namespace mcts
             children.push_back(new_child);
         }
     }
+
     void Node::explore_and_set_priors(const std::pair<double, std::unordered_map<size_t, double>>& evaluation)
     {
         expand(evaluation.second);
         backpropagate(evaluation.first);
     }
 
-    void Node::add_exploration_noise(double dirichlet_alpha, double exploration_factor, std::default_random_engine generator)
+    void Node::add_exploration_noise(double dirichlet_alpha, double exploration_factor)
     {
         std::gamma_distribution<double> gamma_distribution(dirichlet_alpha, 1.0);
         for (std::shared_ptr<Node> child : children)
         {
-            double noise = gamma_distribution(generator);
+            double noise = gamma_distribution(get_generator());
             child->prior = child->prior * (1 - exploration_factor) + exploration_factor * noise;
         }
     }
@@ -132,6 +134,7 @@ namespace mcts
     std::shared_ptr<Node> Node::best_child() const
     {
         std::vector<size_t> num_visits{};
+        if (children.size() == 0) return std::shared_ptr<Node>();
         for (std::shared_ptr<Node> child : children)
         {
             num_visits.push_back(child->n);
@@ -180,10 +183,17 @@ namespace mcts
     {
         return n;
     }
-
+    chess::move Node::get_move() const
+    {
+        return move;
+    } 
     double Node::get_value() const
     {
         return n != 0 ? t / n : -100;
+    }
+    void Node::make_start_node() 
+    {
+        is_start_node = true;
     }
 
     double Node::WIN_SCORE = 1.0;

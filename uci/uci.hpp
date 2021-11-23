@@ -20,6 +20,7 @@
 #include <mutex>
 #include <algorithm>
 #include <thread>
+#include <limits>
 
 #include <chess/chess.hpp>
 
@@ -41,7 +42,7 @@ enum class option_type
 	spin,
 	combo,
 	button,
-	string
+	string,
 };
 
 
@@ -69,42 +70,40 @@ struct option_check: option
     option_check(bool default_value);
     ~option_check() = default;
 
-    operator bool() const;
-
     void set(const std::string& new_value) override;
-
     void insert(std::ostream& out) const override;
+    const bool& ref() const;
+    operator bool() const;
 
     bool value;
 };
+
 
 struct option_spin: option
 {
     option_spin(int default_value, int min, int max);
     ~option_spin() = default;
 
-    operator int() const;
-
     void set(const std::string& new_value) override;
-
     void insert(std::ostream& out) const override;
+    const int& ref() const;
+    operator int() const;
 
     int value;
     int min;
     int max;
 };
 
+
 struct option_combo: option
 {
     option_combo(std::string_view default_value, std::initializer_list<std::string> alternatives);
-
     ~option_combo() = default;
 
-    operator std::string() const;
-
     void set(const std::string& new_value) override;
-
     void insert(std::ostream& out) const override;
+    const std::string& ref() const;
+    operator std::string() const;
 
     std::string value;
     std::unordered_set<std::string> alternatives;
@@ -116,25 +115,33 @@ struct option_button: option
     ~option_button() = default;
 
     void set(const std::string&) override;
-
     void insert(std::ostream& out) const override;
 
     std::function<void()> callback;
 };
 
-struct option_string: option
+template<typename T>
+struct option_value: option
 {
-    option_string(std::string_view default_value);
-    ~option_string() = default;
+    option_value(T default_value);
+    ~option_value() = default;
 
-    operator std::string() const;
+    operator T() const;
 
     void set(const std::string& new_value) override;
 
     void insert(std::ostream& out) const override;
 
-    std::string value;
+    const T& ref() const;
+
+    T value;
 };
+
+
+using option_int = option_value<int>;
+using option_unsigned = option_value<unsigned>;
+using option_float = option_value<float>;
+using option_string = option_value<std::string>;
 
 
 class options
@@ -142,7 +149,7 @@ class options
 public:
     // Add option. Arguments forwarded to option constructor.
     template<class T, class... Ts> //requires std::derived_from<T, option>
-    void add(const std::string& name, Ts&&... args);
+    const T& add(const std::string& name, Ts&&... args);
 
     // Get option of by name.
     template<class T> //requires std::derived_from<T, option>
@@ -248,6 +255,7 @@ struct search_result
 class engine
 {
 public:
+    engine();
     virtual ~engine() = default;
 
     // Engine name.
@@ -280,10 +288,30 @@ int main(engine& engine);
 }
 
 
+template <typename T>
+uci::option_value<T>::option_value(T default_value):
+option(uci::option_type::string),
+value{default_value}
+{}
+
+template <typename T>
+void uci::option_value<T>::set(const std::string& new_value)
+{
+    std::istringstream in(new_value);
+    in >> value;
+}
+
+template <typename T>
+void uci::option_value<T>::insert(std::ostream& out) const
+{
+    out << "type string default " << value;
+}
+
 template<class T, class... Args> //requires std::derived_from<T, uci::option>
-void uci::options::add(const std::string& name, Args&&... args)
+const T& uci::options::add(const std::string& name, Args&&... args)
 {
     holder.emplace(key(name), std::make_unique<T>(std::forward<Args>(args)...));
+    return dynamic_cast<T&>(*holder.at(key(name)));
 }
 
 
@@ -291,6 +319,18 @@ template<class T> //requires std::derived_from<T, uci::option>
 const T& uci::options::get(const std::string& name)
 {
     return dynamic_cast<T&>(*holder.at(key(name)));
+}
+
+template <typename T>
+const T& uci::option_value<T>::ref() const
+{
+    return value;
+}
+
+template <typename T>
+uci::option_value<T>::operator T() const
+{
+    return value;
 }
 
 

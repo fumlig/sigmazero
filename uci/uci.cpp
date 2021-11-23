@@ -54,11 +54,6 @@ option(option_type::check),
 value{default_value}
 {}
 
-option_check::operator bool() const
-{
-    return value;
-}
-
 void option_check::set(const std::string& new_value)
 {
     if(new_value == "true")
@@ -80,21 +75,27 @@ void option_check::insert(std::ostream& out) const
     out << "type check default " << (value ? "true" : "false");
 }
 
+const bool& option_check::ref() const
+{
+    return value;
+}
+
+option_check::operator bool() const
+{
+    return value;
+}
 
 
-option_spin::option_spin(int default_value, int min, int max):
-option(option_type::spin),
+
+
+uci::option_spin::option_spin(int default_value, int min, int max):
+option(uci::option_type::spin),
 value{default_value},
 min{min},
 max{max}
 {}
 
-option_spin::operator int() const
-{
-    return value;
-}
-
-void option_spin::set(const std::string& new_value)
+void uci::option_spin::set(const std::string& new_value)
 {
     int i = std::stoi(new_value);
 
@@ -106,9 +107,19 @@ void option_spin::set(const std::string& new_value)
     value = i;
 }
 
-void option_spin::insert(std::ostream& out) const
+void uci::option_spin::insert(std::ostream& out) const
 {
     out << "type spin default " << value << " min " << min << " max " << max;
+}
+
+const int& option_spin::ref() const
+{
+    return value;
+}
+
+uci::option_spin::operator int() const
+{
+    return value;
 }
 
 
@@ -117,11 +128,6 @@ option(option_type::combo),
 value{default_value},
 alternatives(alternatives)
 {}
-
-option_combo::operator std::string() const
-{
-    return value;
-}
 
 void option_combo::set(const std::string& new_value)
 {
@@ -143,6 +149,16 @@ void option_combo::insert(std::ostream& out) const
     }
 }
 
+const std::string& option_combo::ref() const
+{
+    return value;
+}
+
+option_combo::operator std::string() const
+{
+    return value;
+}
+
 
 option_button::option_button(std::function<void()> callback):
 option(option_type::button),
@@ -157,28 +173,6 @@ void option_button::set(const std::string&)
 void option_button::insert(std::ostream& out) const
 {
     out << "type button";
-}
-
-
-
-option_string::option_string(std::string_view default_value):
-option(option_type::string),
-value{default_value}
-{}
-
-option_string::operator std::string() const
-{
-    return value;
-}
-
-void option_string::set(const std::string& new_value)
-{
-    value = new_value;
-}
-
-void option_string::insert(std::ostream& out) const
-{
-    out << "type string default " << value;
 }
 
 
@@ -306,6 +300,15 @@ void search_info::move(const chess::move& move, int number)
 void search_info::message(const std::string& message)
 {
 	push_message("info string " + message);
+}
+
+
+engine::engine(): opt()
+{
+    opt.add<uci::option_spin>("MultiPV", 1, 1, 1);
+    opt.add<uci::option_spin>("Move Overhead", 0, 0, 1);
+    opt.add<uci::option_spin>("Threads", 1, 1, 1);
+    opt.add<uci::option_spin>("Hash", 1, 1, 1);
 }
 
 
