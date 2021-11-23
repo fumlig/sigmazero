@@ -9,13 +9,11 @@
 #include <chess/chess.hpp>
 #include <torch/torch.h>
 
-
 #include "selfplay_worker.hpp"
 #include "drl/sigmanet.hpp"
 #include "mcts/node.hpp"
 #include "base64.hpp"
 #include "util.hpp"
-
 
 
 int main(int argc, char **argv)
@@ -67,8 +65,8 @@ int main(int argc, char **argv)
 	// Sätt till 1.0 för att stänga av fast playouts
 	double full_search_prob = 0.25;
 	
-	int full_search_iterations = 600;
-	int fast_search_iterations = 100;
+	int full_search_iterations = 80;
+	int fast_search_iterations = 80;
 
 	std::bernoulli_distribution search_type_dist(full_search_prob);
 
@@ -81,7 +79,7 @@ int main(int argc, char **argv)
 	// 32 workers: ~15 seconds
 	// 64 workers: ~31 seconds
 	// 256 workers: ~128 seconds
-	int batch_size = 4;
+	int batch_size = 1;
 	
 	std::vector<selfplay_worker> workers(batch_size);
 
@@ -108,7 +106,7 @@ int main(int argc, char **argv)
 				}
 			}
 		}
-
+		
 		std::vector<chess::position> positions_to_evaluate(batch_size);
 		std::vector<bool> position_mask(batch_size);
 		
@@ -117,9 +115,9 @@ int main(int argc, char **argv)
 		{
 			positions_to_evaluate[worker_idx] = workers[worker_idx].get_position();
 		}
-		
 		// Evaluate
 		auto evaluation = model->evaluate_batch(positions_to_evaluate, device);
+		
 		for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx) 
 		{
 			workers[worker_idx].initial_setup(evaluation[worker_idx]);
@@ -144,7 +142,7 @@ int main(int argc, char **argv)
 				position_mask[worker_idx] = true;
 				positions_to_evaluate[worker_idx] = *traversed_position;
 			}
-			
+
 			auto evaluation = model->evaluate_batch(positions_to_evaluate, device);
 
 			for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx)
@@ -152,7 +150,6 @@ int main(int argc, char **argv)
 				if (position_mask[worker_idx]) workers[worker_idx].explore_and_set_priors(evaluation[worker_idx]);
 			}
 		}
-
 		// Make the best moves
 		for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx)
 		{
