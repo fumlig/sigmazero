@@ -18,12 +18,12 @@ class selfplay_worker
 public:
     selfplay_worker();
     chess::position get_position() const;
-    bool game_is_terminal(int max_game_size=512) const;
+    bool game_is_terminal(size_t max_game_size=512) const;
     void initial_setup(const std::pair<double, std::unordered_map<size_t, double>>& evaluation);
 
     std::optional<chess::position> traverse();
     void explore_and_set_priors(const std::pair<double, std::unordered_map<size_t, double>>& evaluation);
-    chess::move make_best_move(torch::Tensor position_encoding);
+    chess::move make_best_move(torch::Tensor position_encoding, const bool& record);
     void output_game(std::ostream& stream);
 
 private:

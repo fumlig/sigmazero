@@ -75,6 +75,7 @@ int main(int argc, char **argv)
 	int model_check_counter = 0;
 	int model_update_int = 100;
 
+	// with 600 iterations:
 	// 1 worker: ~1 second
 	// 8 workers: ~4 seconds 
 	// 32 workers: ~15 seconds
@@ -125,7 +126,10 @@ int main(int argc, char **argv)
 		}
 	
 		// Do tha search
-		for(int i = 0 ; i < full_search_iterations ; ++i)
+		bool do_full_search = search_type_dist(get_generator());
+		int iters = do_full_search ? full_search_iterations : fast_search_iterations;
+
+		for(int i = 0 ; i < iters ; ++i)
 		{
 		// Do stuff with workers
 			for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx)
@@ -152,7 +156,7 @@ int main(int argc, char **argv)
 		// Make the best moves
 		for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx)
 		{
-			chess::move move = workers[worker_idx].make_best_move(model->encode_input(workers[worker_idx].get_position()));
+			chess::move move = workers[worker_idx].make_best_move(model->encode_input(workers[worker_idx].get_position()), true);
 			std::cerr << "Worker " << worker_idx << " made move " << move.to_lan() << std::endl;
 			
 			// Output game and reset worker

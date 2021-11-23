@@ -111,8 +111,8 @@ int main(int argc, char** argv)
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 256;
-	const std::size_t batch_size = 64;
+	const std::size_t window_size = 64;
+	const std::size_t batch_size = 16;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;

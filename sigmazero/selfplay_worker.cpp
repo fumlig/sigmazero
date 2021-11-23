@@ -14,9 +14,9 @@ chess::position selfplay_worker::get_position() const
     return game.get_position();
 }
 
-bool selfplay_worker::game_is_terminal(int max_game_size) const
+bool selfplay_worker::game_is_terminal(size_t max_game_size) const
 {
-    return game.is_terminal() ||game.size() >= max_game_size;
+    return game.is_terminal() || game.size() >= max_game_size;
 }
 
 void selfplay_worker::initial_setup(const std::pair<double, std::unordered_map<size_t, double>>& evaluation)
@@ -40,18 +40,20 @@ std::optional<chess::position> selfplay_worker::traverse()
 
 void selfplay_worker::explore_and_set_priors(const std::pair<double, std::unordered_map<size_t, double>>& evaluation)
 {
-    main_node->explore_and_set_priors(evaluation);
+    current_node->explore_and_set_priors(evaluation);
 }
 
-chess::move selfplay_worker::make_best_move(torch::Tensor position_encoding)
+chess::move selfplay_worker::make_best_move(torch::Tensor position_encoding, const bool& record)
 {
 
-    images.push_back(position_encoding);
-    std::vector<double> action_dist = main_node->action_distribution();
-    torch::Tensor action_tensor = torch::tensor(action_dist);
-    policies.push_back(action_tensor);
-    players.push_back(game.get_position().get_turn());
-
+    if(record)
+    {
+        images.push_back(position_encoding);
+        std::vector<double> action_dist = main_node->action_distribution();
+        torch::Tensor action_tensor = torch::tensor(action_dist);
+        policies.push_back(action_tensor);
+        players.push_back(game.get_position().get_turn());
+    }
     main_node = main_node->best_child();
     main_node->make_start_node();
     chess::move best_move = main_node->get_move();
