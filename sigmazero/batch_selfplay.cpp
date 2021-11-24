@@ -162,12 +162,15 @@ int main(int argc, char **argv)
 		// Make the best moves
 		for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx)
 		{
-			chess::move move = workers[worker_idx].make_best_move(model->encode_input(workers[worker_idx].get_position()), do_full_search);
-			std::cerr << "worker " << worker_idx << ": " << move.to_lan() << ", ";
+			//chess::move move = workers[worker_idx].make_best_move(model->encode_input(workers[worker_idx].get_position()), do_full_search);
+			//std::cerr << "worker " << worker_idx << ": " << move.to_lan() << std::endl;
 			
 			// Output game and reset worker
 			if(workers[worker_idx].game_is_terminal()) 
 			{
+				std::cout << "sending replay of size " << workers[worker_idx].get_game().size() << " with moves ";
+				for(const auto& [move, _]: workers[worker_idx].get_game().get_history()) std::cerr << move.to_lan() << " "; std::cerr << std::endl;
+
 				workers[worker_idx].output_game(std::cout);
 				workers[worker_idx] = selfplay_worker();
 				terminal_count++;

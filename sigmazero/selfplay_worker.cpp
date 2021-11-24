@@ -9,9 +9,14 @@ selfplay_worker::selfplay_worker()
     main_node = std::make_shared<mcts::Node>(game.get_position());
 }
 
-chess::position selfplay_worker::get_position() const
+const chess::position& selfplay_worker::get_position() const
 {
     return game.get_position();
+}
+
+const chess::game& selfplay_worker::get_game() const
+{
+    return game;
 }
 
 bool selfplay_worker::game_is_terminal(size_t max_game_size) const
@@ -72,8 +77,6 @@ void selfplay_worker::output_game(std::ostream& stream)
 
         stream << encode(images[i]) << ' ' << encode(value) << ' ' << encode(policies[i]) << std::endl; //according to side
     }
-
-    std::cerr << "sent replay of size " << images.size() << std::endl;
 }
 
 std::string selfplay_worker::encode(const torch::Tensor &tensor)
