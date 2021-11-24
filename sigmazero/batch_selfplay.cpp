@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 	std::cerr << "started with model " << model_path << std::endl;
 
 	// Sätt till 1.0 för att stänga av fast playouts
-	double full_search_prob = 0.25;
+	double full_search_prob = 1.0;
 	
 	int full_search_iterations = 800;
 	int fast_search_iterations = 100;
@@ -77,6 +77,8 @@ int main(int argc, char **argv)
 	int batch_size = 256;
 	
 	std::vector<selfplay_worker> workers(batch_size);
+
+	unsigned long long total_moves = 0;
 
 	while (true)
 	{
@@ -166,7 +168,6 @@ int main(int argc, char **argv)
 				if(worker.replay_size() == 0)
 				{
 					std::cerr << "worker " << worker_idx << " terminal with replay size " << 0 << ", skipping send" << std::endl;
-					continue;
 				}
 				else
 				{
@@ -176,9 +177,7 @@ int main(int argc, char **argv)
 						std::cerr << move.to_lan() << " ";
 					}
 					std::cerr << std::endl;
-
 					workers[worker_idx].output_game(std::cout);
-
 				}
 
 				workers[worker_idx] = selfplay_worker();
@@ -186,7 +185,9 @@ int main(int argc, char **argv)
 			}
 		}
 
-		std::cerr << "batch complete, " << terminal_count << " workers reset" << std::endl;
+		total_moves += batch_size;
+
+		std::cerr << "batch complete, " << terminal_count << " workers reset, " << total_moves << " total moves" << std::endl;
 	}
 	return 0;
 }

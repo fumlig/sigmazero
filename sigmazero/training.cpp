@@ -34,12 +34,13 @@ static torch::Tensor decode(const std::string& data)
 
 static void replay_receiver(std::istream& stream, sync_queue<std::string>& queue)
 {
-	while(true)
+	std::string replay;
+	while(std::getline(stream, replay))
 	{
-		std::string replay;
-		std::getline(stream, replay);
 		queue.push(replay);
 	}
+
+	std::cerr << "one replay receiver stopped" << std::endl;
 }
 
 
@@ -68,17 +69,10 @@ int main(int argc, char** argv)
 	{
 		torch::save(model, model_path);
 		std::cerr << "saved initial model" << std::endl;
-		//std::cout << std::endl; // indicate that model has been updated
 	}
 	
 	// receive selfplay replays
 	std::vector<std::ifstream> replay_files(argv+2, argv+argc);
-	
-	for(int i = 0; i < argc; i++)
-	{
-		std::cerr << "argv[" << i << "]" << argv[i] << std::endl;
-	}
-	
 	sync_queue<std::string> replay_queue;
 	std::vector<std::reference_wrapper<std::istream>> replay_streams(replay_files.begin(), replay_files.end());
 	std::vector<std::thread> replay_threads;
@@ -143,6 +137,8 @@ int main(int argc, char** argv)
 	{
 		while(replay_queue.size())
 		{
+			std::cerr << "receiving replay image" << std::endl;
+
 			std::string replay = replay_queue.pop();
 			replay_timestamps.push(std::chrono::steady_clock::now());
 
@@ -244,8 +240,6 @@ int main(int argc, char** argv)
 				std::cerr << "saved checkpoint " << checkpoint_path << std::endl;
 			}
 		}
-
-		//std::cout << std::endl; // indicate that model has updated
 
 		// show statistics
 		std::chrono::duration<float> window_duration = replay_timestamps.back() - replay_timestamps.front();
