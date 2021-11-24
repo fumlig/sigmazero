@@ -26,7 +26,7 @@ private:
 public:
     sigmazero(const std::filesystem::path& model_path):
     uci::engine(),
-    model(0, 64, 13),
+    model(0, 128, 10),
     device(torch::kCPU),
     game(),
     node(),
