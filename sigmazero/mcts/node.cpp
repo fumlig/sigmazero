@@ -77,13 +77,18 @@ namespace mcts
     // Expand node
     void Node::expand(const std::unordered_map<size_t, double> &action_probabilities)
     {
-        for (auto action_prob : action_probabilities)
+
+        for (auto [child_action, child_prior] : action_probabilities)
         {
-            chess::move child_move = action_encodings::move_from_action(state, action_prob.first);
+            // Actions will be from "white perspective" (even if black)
+            // Therefor, to get actual libchess move we first have to conditionally
+            // flip the action (the condition being if we are black)
+            size_t libchess_action = action_encodings::cond_flip_action(state, child_action);
+            chess::move child_move = action_encodings::move_from_action(state, libchess_action);
             chess::position child_state = state.copy_move(child_move);
             std::shared_ptr<Node> new_child = std::make_shared<Node>(child_state, false, weak_from_this(), child_move);
-            new_child->prior = action_prob.second;
-            new_child->action = action_prob.first;
+            new_child->prior = child_prior;
+            new_child->action = child_action;
             children.push_back(new_child);
         }
     }

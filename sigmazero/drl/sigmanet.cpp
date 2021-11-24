@@ -80,7 +80,6 @@ sigmanet_impl::sigmanet_impl(int history, int filters, int blocks) : history{his
 
 
 std::pair<torch::Tensor, torch::Tensor> sigmanet_impl::forward(torch::Tensor x) {
-    
     x = input_conv->forward(x);
     x = residual->forward(x);
 
@@ -91,14 +90,35 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet_impl::forward(torch::Tensor x) 
 }
 
 // Assumes that model is in eval mode
-//TODO: Hash chess::move???????
 std::pair<double, std::unordered_map<size_t, double>> sigmanet_impl::evaluate(const chess::position& p, torch::Device device)
 {
     auto[value, policy_logits] = forward(encode_input(p).unsqueeze(0).to(device));
     // policy now is a 4672x1 tensor of logits
     // Value is a 1x1 tensor of a policy
     return decode_output(policy_logits, value, p);
-    // !IMPORTANT: when passing values to network, pass according to player side
+}
+
+std::vector<std::pair<double, std::unordered_map<size_t, double>>> sigmanet_impl::evaluate_batch(const std::vector<chess::position>& positions, torch::Device device)
+{
+    using namespace torch::indexing;
+    
+    
+    int batch_size = positions.size();
+    std::vector<torch::Tensor> encoded_inputs;
+
+    for (auto& position : positions) {
+        encoded_inputs.push_back(encode_input(position));
+    }
+
+    torch::Tensor batch = torch::stack(encoded_inputs, 0).to(device);
+    auto[value, policy] = forward(batch);
+    std::vector<std::pair<double, std::unordered_map<size_t, double>>> result;
+
+    for (int i = 0; i < batch_size; i++) {
+        result.push_back(decode_output(policy.index({i, "..."}), value.index({i, "..."}), positions[i]));
+    }
+
+    return result;
 }
 
 std::pair<double, std::unordered_map<size_t, double>> sigmanet_impl::decode_output(const torch::Tensor& policy, torch::Tensor value, const chess::position& p) const {
@@ -113,7 +133,9 @@ std::unordered_map<size_t, double> sigmanet_impl::valid_policy_probabilities(con
     double exp_sum = 0.0;
     for (chess::move move: legal_moves) {
         size_t a = action_encodings::action_from_move(move);
-        double value = policy_logits[0][a].item<double>();
+        // Normalize to white perspective if is black
+        a = action_encodings::cond_flip_action(state, a);
+        double value = policy_logits.squeeze()[a].item<double>();
         policy_probabilities[a] = std::exp(value);
         exp_sum += policy_probabilities[a];
     }

@@ -44,9 +44,19 @@ const std::string action_encodings::KNIGHT_ACTION = "Knight";
 const std::string action_encodings::UNDERPROMOTION_ACTION = "Underpromotion";
 
 action_encodings::Action action_encodings::actions[64*73];
+size_t action_encodings::actions_flipped[64*73];
+
 std::map<std::tuple<size_t, int, int, size_t>, size_t> action_encodings::queen_actions;
 std::map<std::tuple<size_t, int, int>, size_t> action_encodings::knight_actions;
 std::map<std::tuple<size_t, int, size_t>, size_t> action_encodings::underpromotion_actions;
+
+
+size_t action_encodings::cond_flip_action(const chess::position& state, size_t action){
+    chess::side p1 = state.get_turn();
+    bool flip = p1 == chess::side_black;
+    return flip ? actions_flipped[action] : action;
+}
+
 
 void action_encodings::initialize_encoding_map(){
     size_t action = 0;
@@ -66,6 +76,28 @@ void action_encodings::initialize_encoding_map(){
             for (int u = 0; u < 3; u++) {
                 underpromotion_actions[std::make_tuple(pos, dx, u)] = action;
                 actions[action++] = {UNDERPROMOTION_ACTION, pos, dx, u};
+            }
+        }
+    }
+    // Do flipped mappings
+    action = 0;
+    for (size_t pos = 0; pos < 64; pos++) {
+        int y = pos / 8;
+        int x = pos % 8;
+        y = 7 - y;
+        size_t flipped_pos = y * 8 + x;
+        for (int dir = 0; dir < 8; dir++) {
+            for (int magnitude = 1; magnitude <= 7; magnitude++) {
+                auto [dx, dy] = queen_directions[dir];
+                actions_flipped[action++] = queen_actions[std::make_tuple(flipped_pos, dx, -dy, magnitude)];
+            }
+            auto [dx, dy] = knight_directions[dir];
+            actions_flipped[action++] = knight_actions[std::make_tuple(flipped_pos, dx, -dy)];
+        }
+
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int u = 0; u < 3; u++) { 
+                actions_flipped[action++] = underpromotion_actions[std::make_tuple(flipped_pos, dx, u)];
             }
         }
     }

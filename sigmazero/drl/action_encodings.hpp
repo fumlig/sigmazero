@@ -26,12 +26,14 @@ struct action_encodings {
 
     // Decoding map
     static Action actions[64*73];
+    static size_t actions_flipped[64*73];
 
     // Encoding maps
     static std::map<std::tuple<size_t, int, int, size_t>, size_t> queen_actions;
     static std::map<std::tuple<size_t, int, int>, size_t> knight_actions;
     static std::map<std::tuple<size_t, int, size_t>, size_t> underpromotion_actions;
 
+    static size_t cond_flip_action(const chess::position& state, size_t action);
     static void initialize_encoding_map();
     static size_t action_from_move(const chess::move& move);
     static chess::move move_from_action(const chess::position& state, size_t action_idx);
