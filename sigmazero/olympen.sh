@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 repo=~/tjack
-directory=~/sigma
-model=sigmazero.pt
+dir=~/sigma_$(date +"%FT%T")
+model=model.pt
+log=log.txt
 
 function prefix {
 	gawk -v arg="$1" '{ print strftime("[%Y-%m-%d %H:%M:%S]" arg) , $0 }'
@@ -24,6 +25,6 @@ function command {
     done
 }
 
-mkdir -p $directory
-cd $directory
-command $@ | xargs
+mkdir -p $dir
+cd $dir
+command $@ | xargs 2> >(tee $log >&2)
