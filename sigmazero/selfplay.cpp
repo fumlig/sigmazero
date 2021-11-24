@@ -29,6 +29,10 @@ int main(int argc, char **argv)
 		std::cerr << "missing model path" << std::endl;
 		return 1;
 	}
+	else
+	{
+		std::cerr << "using model path " << argv[1] << std::endl
+	}
 
 	chess::init();
 	torch::NoGradGuard no_grad;

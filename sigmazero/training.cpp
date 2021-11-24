@@ -50,6 +50,10 @@ int main(int argc, char** argv)
 		std::cerr << "missing model path" << std::endl;
 		return 1;
 	}
+	else
+	{
+		std::cerr << "using model path " << argv[1] << std::endl;
+	}
 
 	// setup initial model
 	std::filesystem::path model_path(argv[1]);

@@ -1,28 +1,22 @@
 #!/usr/bin/env bash
 
+[ $# -eq 0 ] && echo "error: no slaves specified" && exit 1
+
 repo=${SIGMA_REPO:-~/tjack}
 dir=${SIGMA_DIR:-~/sigma_$(date +"%FT%T")}
 model=model.pt
 log=log.txt
 
 function prefix {
-	gawk -v arg="$1" '{ print strftime("[%Y-%m-%d %H:%M:%S]" arg) , $0 }'
+	gawk -v arg="$1" '{ print "[" strftime("%Y-%m-%d %H:%M:%S") " " arg "]" , $0 }'
 }
 
 function selfplay {
-	ssh olympen1-$1.ad.liu.se $repo/build/selfplay $model 2> >(prefix selfplay$1 >&2)
+	ssh olympen1-$1.ad.liu.se "$repo/build/selfplay $dir/$model" 2> >(prefix "selfplay$1" >&2)
 }
 
 function training {
-	$repo/build/training $model 2> >(prefix training >&2)
-}
-
-function command {
-    echo "training"
-    for i in $@
-    do
-        echo "<(selfplay $i)"
-    done
+	$repo/build/training $model 2> >(prefix "training" >&2)
 }
 
 echo "olympen session"
@@ -35,4 +29,4 @@ echo -e "slaves:\t$@"
 
 mkdir -p $dir
 cd $dir
-command $@ | xargs 2> >(tee $log >&2)
+eval training $(printf '<(selfplay %s) ' "$@") #2> >(tee $log >&2)
