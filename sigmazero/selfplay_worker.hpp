@@ -11,6 +11,7 @@
 #include <optional>
 #include <unordered_map>
 #include <ostream>
+#include <cstdint>
 
 
 class selfplay_worker
@@ -20,6 +21,7 @@ public:
     const chess::position& get_position() const;
     const chess::game& get_game() const;
     bool game_is_terminal(size_t max_game_size=512) const;
+    std::size_t replay_size() const;
     void initial_setup(const std::pair<double, std::unordered_map<size_t, double>>& evaluation);
 
     std::optional<chess::position> traverse();

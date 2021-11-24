@@ -24,6 +24,11 @@ bool selfplay_worker::game_is_terminal(size_t max_game_size) const
     return game.is_terminal() || game.size() >= max_game_size;
 }
 
+std::size_t selfplay_worker::replay_size() const
+{
+    return images.size();
+}
+
 void selfplay_worker::initial_setup(const std::pair<double, std::unordered_map<size_t, double>>& evaluation)
 {
     main_node->explore_and_set_priors(evaluation);
