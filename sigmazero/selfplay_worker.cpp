@@ -53,7 +53,7 @@ void selfplay_worker::explore_and_set_priors(const std::pair<double, std::unorde
     current_node->explore_and_set_priors(evaluation);
 }
 
-chess::move selfplay_worker::make_best_move(torch::Tensor position_encoding, const bool& record)
+chess::move selfplay_worker::make_best_move(torch::Tensor position_encoding, bool record)
 {
 
     if(record)
