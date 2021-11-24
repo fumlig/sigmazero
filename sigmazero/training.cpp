@@ -146,10 +146,22 @@ int main(int argc, char** argv)
 
 			std::istringstream(replay) >> encoded_image >> encoded_value >> encoded_policy;
 
-			torch::Tensor replay_image = decode(encoded_image).unsqueeze(0);
-			torch::Tensor replay_value = decode(encoded_value).unsqueeze(0);
-			torch::Tensor replay_policy = decode(encoded_policy).unsqueeze(0);
-		
+			torch::Tensor replay_image;
+			torch::Tensor replay_value;
+			torch::Tensor replay_policy;
+
+			try
+			{
+				replay_image = decode(encoded_image).unsqueeze(0);
+				replay_value = decode(encoded_value).unsqueeze(0);
+				replay_policy = decode(encoded_policy).unsqueeze(0);
+			}
+			catch(const std::exception& e)
+			{
+				std::cerr << "exception raised when decoding replay tensors" << std::endl;
+				std::cerr << e.what() << '\n';
+				continue;
+			}
 			
 			if(first_replay)
 			{

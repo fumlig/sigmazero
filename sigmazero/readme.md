@@ -32,5 +32,5 @@ model=model.pt
 Olympen example:
 
 ```bash
-./olympen.sh 101 102 103
+./olympen.sh 101 101 101 102 102 102 103 103 103
 ```
