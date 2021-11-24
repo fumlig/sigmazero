@@ -181,7 +181,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		std::cerr << std::endl << "batch complete, " << terminal_count << " workers reset" << std::endl;
+		std::cerr << "batch complete, " << terminal_count << " workers reset" << std::endl;
 	}
 	return 0;
 }

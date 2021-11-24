@@ -16,7 +16,7 @@ function selfplay {
 }
 
 function training {
-	$repo/build/training $model 2> >(prefix "training" >&2)
+	$repo/build/training $model $@ 2> >(prefix "training" >&2)
 }
 
 echo "olympen session"
@@ -29,4 +29,6 @@ echo -e "slaves:\t$@"
 
 mkdir -p $dir
 cd $dir
+echo "command: "
+echo $(printf '<(selfplay %s) ' "$@")
 eval training $(printf '<(selfplay %s) ' "$@") #2> >(tee $log >&2)

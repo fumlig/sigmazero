@@ -73,6 +73,12 @@ int main(int argc, char** argv)
 	
 	// receive selfplay replays
 	std::vector<std::ifstream> replay_files(argv+2, argv+argc);
+	
+	for(int i = 0; i < argc; i++)
+	{
+		std::cerr << "argv[" << i << "]" << argv[i] << std::endl;
+	}
+	
 	sync_queue<std::string> replay_queue;
 	std::vector<std::reference_wrapper<std::istream>> replay_streams(replay_files.begin(), replay_files.end());
 	std::vector<std::thread> replay_threads;
