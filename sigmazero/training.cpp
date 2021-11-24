@@ -121,18 +121,18 @@ int main(int argc, char** argv)
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 256;
-	const std::size_t batch_size = 64;
+	const std::size_t window_size = 1024;
+	const std::size_t batch_size = 128;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;
 	torch::Tensor window_policies;
 
-	const unsigned save_rate = 16;			// save after this number of batches
-	const unsigned checkpoint_rate = 256;	// checkpoint after this number of saves
+	const unsigned epoch_batches = 512;	// save after this number of batches
+	const unsigned checkpoint_epochs = 256;	// checkpoint after this number of saves
 
-	unsigned batches_since_save = 0;
-	unsigned saves_since_checkpoint = 0;
+	unsigned batches_since_epoch = 0;
+	unsigned epochs_since_checkpoint = 0;
 
 	bool first_replay = true;
 
@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 			catch(const std::exception& e)
 			{
 				std::cerr << "exception raised when decoding replay tensors" << std::endl;
-				std::cerr << e.what() << '\n';
+				std::cerr << "image: " << encoded_image << ", value: " << encoded_value << ", policy: " << encoded_policy << std::endl;
 				continue;
 			}
 			
@@ -222,16 +222,16 @@ int main(int argc, char** argv)
 		consumed += batch_size;
 
 		// update model
-		if(++batches_since_save == save_rate)
+		if(++batches_since_epoch == epoch_batches)
 		{
-			batches_since_save = 0;
+			batches_since_epoch = 0;
 			
 			torch::save(model, model_path);
 			std::cerr << "saved model " << model_path << std::endl;
 
-			if(++saves_since_checkpoint == checkpoint_rate)
+			if(++epochs_since_checkpoint == checkpoint_epochs)
 			{
-				saves_since_checkpoint = 0;
+				epochs_since_checkpoint = 0;
 
 				auto now = std::chrono::system_clock::now();
  				const std::time_t t_c = std::chrono::system_clock::to_time_t(now);

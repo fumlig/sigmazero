@@ -74,38 +74,31 @@ int main(int argc, char **argv)
 
 	std::bernoulli_distribution search_type_dist(full_search_prob);
 
-	int model_check_counter = 0;
-	int model_update_int = 100;
-
-
 	int batch_size = 256;
 	
 	std::vector<selfplay_worker> workers(batch_size);
 
 	while (true)
 	{
-		// Load the newest model every 100 iterations
-		if(++model_check_counter == model_update_int)
+		// load latest model
+		auto model_write = std::filesystem::last_write_time(model_path);
+		if (model_write > model_changed)
 		{
-			model_check_counter = 0;
-			// load latest model
-			auto model_write = std::filesystem::last_write_time(model_path);
-			if (model_write > model_changed)
+			try
 			{
-				try
-				{
-					torch::load(model, model_path);
-					model->to(device);
-					model_changed = model_write;
-					std::cerr << "updated model loaded" << std::endl;
-				}
-				catch(const std::exception& e)
-				{
-					std::cerr << "loading updated model failed" << std::endl;
-				}
+				torch::load(model, model_path);
+				model->to(device);
+				model_changed = model_write;
+				std::cerr << "updated model loaded" << std::endl;
+			}
+			catch(const std::exception& e)
+			{
+				std::cerr << "loading updated model failed" << std::endl;
 			}
 		}
-		
+	
+		std::cerr << "checked for new model" << std::endl;
+
 		std::vector<chess::position> positions_to_evaluate(batch_size);
 		std::vector<bool> position_mask(batch_size);
 		

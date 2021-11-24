@@ -29,6 +29,4 @@ echo -e "slaves:\t$@"
 
 mkdir -p $dir
 cd $dir
-echo "command: "
-echo $(printf '<(selfplay %s) ' "$@")
-eval training $(printf '<(selfplay %s) ' "$@") #2> >(tee $log >&2)
+eval "training $(printf '<(selfplay %s) ' "$@")" #2>&1 | tee $log
