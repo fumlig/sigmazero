@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
 	// setup initial model
 	std::filesystem::path model_path(argv[1]);
-	sigmanet model(0, 64, 13);
+	sigmanet model(0, 128, 10);
 
 	if(std::filesystem::exists(model_path))
 	{

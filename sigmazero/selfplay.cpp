@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 	}
 
 	// load initial model
-	sigmanet model(0, 64, 13);
+	sigmanet model(0, 128, 10);
 
 	torch::Device device(torch::kCPU);
 	// For now only use CPU for self-play (overhead for single evaluation on GPU):
