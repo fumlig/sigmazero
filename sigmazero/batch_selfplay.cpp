@@ -23,6 +23,10 @@ int main(int argc, char **argv)
 		std::cerr << "missing model path" << std::endl;
 		return 1;
 	}
+	else
+	{
+		std::cerr << "using model path" << argv[1] << std::endl; 
+	}
 
 	chess::init();
 	torch::NoGradGuard no_grad;
@@ -44,11 +48,11 @@ int main(int argc, char **argv)
     if(torch::cuda::is_available())
     {
          device = torch::Device(torch::kCUDA);
-         std::cerr << "selfplay: Using CUDA" << std::endl;
+         std::cerr << "using CUDA" << std::endl;
     }
     else
 	{
-         std::cerr << "selfplay: Using CPU" << std::endl;
+         std::cerr << "using CPU" << std::endl;
     }
 
 	torch::load(model, model_path);
@@ -113,18 +117,24 @@ int main(int argc, char **argv)
 		// Evaluate
 		auto evaluation = model->evaluate_batch(positions_to_evaluate, device);
 		
+		std::cerr << "batch evaluated" << std::endl;
+
 		for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx) 
 		{
 			workers[worker_idx].initial_setup(evaluation[worker_idx]);
 		}
+
+		std::cerr << "workers setup" << std::endl;
 	
 		// Do tha search
 		bool do_full_search = search_type_dist(get_generator());
 		int iters = do_full_search ? full_search_iterations : fast_search_iterations;
 
+		std::cerr << "doing " << (do_full_search ? "full" : "fast") << " search" << std::endl;
+
 		for(int i = 0 ; i < iters ; ++i)
 		{
-		// Do stuff with workers
+			// Do stuff with workers
 			for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx)
 			{
 				std::optional<chess::position> traversed_position = workers[worker_idx].traverse();
@@ -144,19 +154,27 @@ int main(int argc, char **argv)
 				if (position_mask[worker_idx]) workers[worker_idx].explore_and_set_priors(evaluation[worker_idx]);
 			}
 		}
+
+		std::cerr << "mcts step done" << std::endl;
+
+		int terminal_count = 0;
+
 		// Make the best moves
 		for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx)
 		{
 			chess::move move = workers[worker_idx].make_best_move(model->encode_input(workers[worker_idx].get_position()), do_full_search);
-			std::cerr << "Worker " << worker_idx << " made move " << move.to_lan() << std::endl;
+			std::cerr << "worker " << worker_idx << ": " << move.to_lan() << ", ";
 			
 			// Output game and reset worker
 			if(workers[worker_idx].game_is_terminal()) 
 			{
 				workers[worker_idx].output_game(std::cout);
 				workers[worker_idx] = selfplay_worker();
+				terminal_count++;
 			}
-		} 
+		}
+
+		std::cerr << std::endl << "batch complete, " << terminal_count << " workers reset" << std::endl;
 	}
 	return 0;
 }
