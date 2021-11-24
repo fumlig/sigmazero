@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-repo=~/tjack
-dir=~/sigma_$(date +"%FT%T")
+repo=${SIGMA_REPO:-~/tjack}
+dir=${SIGMA_DIR:-~/sigma_$(date +"%FT%T")}
 model=model.pt
 log=log.txt
 
@@ -24,6 +24,14 @@ function command {
         echo "<(selfplay $i)"
     done
 }
+
+echo "olympen session"
+echo "==============="
+echo -e "repo:\t$repo"
+echo -e "dir:\t$dir"
+echo -e "model:\t$dir/$model"
+echo -e "log:\t$dir/$log"
+echo -e "slaves:\t$@"
 
 mkdir -p $dir
 cd $dir
