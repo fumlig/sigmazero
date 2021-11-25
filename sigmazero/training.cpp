@@ -115,14 +115,14 @@ int main(int argc, char** argv)
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 1024;
+	const std::size_t window_size = 2048;
 	const std::size_t batch_size = 128;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;
 	torch::Tensor window_policies;
 
-	const unsigned epoch_batches = 512;	// save after this number of batches
+	const unsigned epoch_batches = 1024;	// save after this number of batches
 	const unsigned checkpoint_epochs = 256;	// checkpoint after this number of saves
 
 	unsigned batches_since_epoch = 0;
@@ -135,10 +135,13 @@ int main(int argc, char** argv)
 
 	while(true)
 	{
+		if(replay_queue.size())
+		{
+			std::cerr << "shifting " << replay_queue.size() << " replay images into the window" << std::endl;
+		}
+
 		while(replay_queue.size())
 		{
-			std::cerr << "receiving replay image" << std::endl;
-
 			std::string replay = replay_queue.pop();
 			replay_timestamps.push(std::chrono::steady_clock::now());
 
@@ -214,16 +217,23 @@ int main(int argc, char** argv)
 		auto loss = sigma_loss(value, batch_values, policy, batch_policies);
 		loss.backward();
 		optimizer.step();
-		std::cerr << "loss: " << loss.item<float>() << std::endl;
+
 		consumed += batch_size;
 
 		// update model
 		if(++batches_since_epoch == epoch_batches)
 		{
+			std::cerr << "epoch complete, loss on last batch: " << loss.item<float>() << std::endl;
+
+			std::chrono::duration<float> window_duration = replay_timestamps.back() - replay_timestamps.front();
+			std::cerr << "received: " << received << ", consumed: " << consumed << ", rate: " << window_size/window_duration.count() << std::endl;
+
 			batches_since_epoch = 0;
 			
 			torch::save(model, model_path);
 			std::cerr << "saved model " << model_path << std::endl;
+
+			std::cout << epochs_since_checkpoint << "/" << checkpoint_epochs << " epochs until checkpoint" << std::endl;
 
 			if(++epochs_since_checkpoint == checkpoint_epochs)
 			{
@@ -240,10 +250,6 @@ int main(int argc, char** argv)
 				std::cerr << "saved checkpoint " << checkpoint_path << std::endl;
 			}
 		}
-
-		// show statistics
-		std::chrono::duration<float> window_duration = replay_timestamps.back() - replay_timestamps.front();
-		std::cerr << "received: " << received << ", consumed: " << consumed << ", rate: " << window_size/window_duration.count() << std::endl;
 	}
 
 	return 0;

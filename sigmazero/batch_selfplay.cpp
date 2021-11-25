@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 	// Sätt till 1.0 för att stänga av fast playouts
 	double full_search_prob = 1.0;
 	
-	int full_search_iterations = 800;
+	int full_search_iterations = 400;
 	int fast_search_iterations = 100;
 
 	std::bernoulli_distribution search_type_dist(full_search_prob);

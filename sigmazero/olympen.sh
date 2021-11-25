@@ -8,7 +8,7 @@ model=model.pt
 log=log.txt
 
 function prefix {
-	gawk -v arg="$1" '{ print "[" strftime("%Y-%m-%d %H:%M:%S") " " arg "]" , $0 }'
+	gawk -v pre="$1" '{ print "[" strftime("%Y-%m-%d %H:%M:%S") " " pre "]" , $0 ; fflush() }'
 }
 
 function selfplay {
@@ -17,6 +17,11 @@ function selfplay {
 
 function training {
 	$repo/build/training $model $@ 2> >(prefix "training" >&2)
+}
+
+function command
+{
+	eval "training $(printf '<(selfplay %s) ' $@)" 2> >(tee $log)
 }
 
 echo "olympen session"
@@ -29,4 +34,4 @@ echo -e "slaves:\t$@"
 
 mkdir -p $dir
 cd $dir
-eval "training $(printf '<(selfplay %s) ' "$@")" #2>&1 | tee $log
+command $@

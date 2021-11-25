@@ -55,7 +55,6 @@ void selfplay_worker::explore_and_set_priors(const std::pair<double, std::unorde
 
 chess::move selfplay_worker::make_best_move(torch::Tensor position_encoding, bool record)
 {
-
     if(record)
     {
         images.push_back(position_encoding);
@@ -64,6 +63,7 @@ chess::move selfplay_worker::make_best_move(torch::Tensor position_encoding, boo
         policies.push_back(action_tensor);
         players.push_back(game.get_position().get_turn());
     }
+
     main_node = main_node->best_child();
     main_node->make_start_node();
     chess::move best_move = main_node->get_move();
