@@ -79,6 +79,10 @@ int main(int argc, char **argv)
 	std::vector<selfplay_worker> workers(batch_size);
 
 	unsigned long long total_moves = 0;
+	
+	unsigned long long win_terminations = 0;
+	unsigned long long draw_terminations = 0;
+	unsigned long long early_terminations = 0;
 
 	while (true)
 	{
@@ -180,6 +184,20 @@ int main(int argc, char **argv)
 					workers[worker_idx].output_game(std::cout);
 				}
 
+				std::optional<float> score = worker.get_game().get_score();
+				if(!score)
+				{
+					early_terminations++;
+				}
+				else if(*score == 0.0f)
+				{
+					draw_terminations++;
+				}
+				else
+				{
+					win_terminations++;
+				}
+
 				workers[worker_idx] = selfplay_worker();
 				terminal_count++;
 			}
@@ -188,6 +206,7 @@ int main(int argc, char **argv)
 		total_moves += batch_size;
 
 		std::cerr << "batch complete, " << terminal_count << " workers reset, " << total_moves << " total moves" << std::endl;
+		std::cerr << "total terminations: " << win_terminations << " wins, " << draw_terminations << " draws, " << early_terminations << " early" << std::endl;
 	}
 	return 0;
 }

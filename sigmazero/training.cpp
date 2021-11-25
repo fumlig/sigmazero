@@ -97,11 +97,11 @@ int main(int argc, char** argv)
     if(torch::cuda::is_available())
     {
         device = torch::Device(torch::kCUDA);
-        std::cerr << "Using CUDA" << std::endl;
+        std::cerr << "using CUDA" << std::endl;
     }
     else
 	{
-        std::cerr << "Using CPU" << std::endl;
+        std::cerr << "using CPU" << std::endl;
     }
 
 	model->train();
