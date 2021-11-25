@@ -92,14 +92,22 @@ std::pair<torch::Tensor, torch::Tensor> sigmanet_impl::forward(torch::Tensor x) 
 // Assumes that model is in eval mode
 std::pair<double, std::unordered_map<size_t, double>> sigmanet_impl::evaluate(const chess::position& p, torch::Device device)
 {
+    static torch::Device cpu(torch::kCPU);
+    
     auto[value, policy_logits] = forward(encode_input(p).unsqueeze(0).to(device));
-    // policy now is a 4672x1 tensor of logits
+    // policy now is a 1x4672 tensor of logits
     // Value is a 1x1 tensor of a policy
+
+    // Put policy on cpu, we need go through it element by element
+    // Also squeeze it so it becomes 4672 size 1D tensor 
+    policy_logits = policy_logits.to(cpu).squeeze();
+
     return decode_output(policy_logits, value, p);
 }
 
 std::vector<std::pair<double, std::unordered_map<size_t, double>>> sigmanet_impl::evaluate_batch(const std::vector<chess::position>& positions, torch::Device device)
 {
+    static torch::Device cpu(torch::kCPU);
     using namespace torch::indexing;
     
     
@@ -113,6 +121,8 @@ std::vector<std::pair<double, std::unordered_map<size_t, double>>> sigmanet_impl
     torch::Tensor batch = torch::stack(encoded_inputs, 0).to(device);
     auto[value, policy] = forward(batch);
     std::vector<std::pair<double, std::unordered_map<size_t, double>>> result;
+    // Put policy on cpu, we need go through it element by element
+    policy = policy.to(cpu);
 
     for (int i = 0; i < batch_size; i++) {
         result.push_back(decode_output(policy.index({i, "..."}), value.index({i, "..."}), positions[i]));
@@ -135,7 +145,7 @@ std::unordered_map<size_t, double> sigmanet_impl::valid_policy_probabilities(con
         size_t a = action_encodings::action_from_move(move);
         // Normalize to white perspective if is black
         a = action_encodings::cond_flip_action(state, a);
-        double value = policy_logits.squeeze()[a].item<double>();
+        double value = policy_logits[a].item<double>();
         policy_probabilities[a] = std::exp(value);
         exp_sum += policy_probabilities[a];
     }
