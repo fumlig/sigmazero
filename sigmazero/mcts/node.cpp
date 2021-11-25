@@ -175,7 +175,7 @@ namespace mcts
     // Check if current state is a terminal state
     bool Node::is_over() const
     {
-        return state.is_checkmate() || state.is_stalemate();
+        return state.is_terminal();
     }
 
     // Get amount of vists
@@ -189,7 +189,7 @@ namespace mcts
     } 
     double Node::get_value() const
     {
-        return n != 0 ? t / n : -100;
+        return n != 0 ? t / n : 0;
     }
     void Node::make_start_node() 
     {
