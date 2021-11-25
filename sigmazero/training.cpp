@@ -40,7 +40,7 @@ static void replay_receiver(std::istream& stream, sync_queue<std::string>& queue
 		queue.push(replay);
 	}
 
-	std::cerr << "one replay receiver stopped" << std::endl;
+	std::cerr << "one replay stream was closed unexpectedly" << std::endl;
 }
 
 
@@ -123,7 +123,7 @@ int main(int argc, char** argv)
 	torch::Tensor window_policies;
 
 	const unsigned epoch_batches = 1024;	// save after this number of batches
-	const unsigned checkpoint_epochs = 256;	// checkpoint after this number of saves
+	const unsigned checkpoint_epochs = 32;	// checkpoint after this number of saves
 
 	unsigned batches_since_epoch = 0;
 	unsigned epochs_since_checkpoint = 0;
@@ -237,7 +237,7 @@ int main(int argc, char** argv)
 			torch::save(model, model_path);
 			std::cerr << "saved model " << model_path << std::endl;
 
-			std::cout << epochs_since_checkpoint << "/" << checkpoint_epochs << " epochs until checkpoint" << std::endl;
+			std::cerr << epochs_since_checkpoint << "/" << checkpoint_epochs << " epochs until checkpoint" << std::endl;
 
 			if(++epochs_since_checkpoint == checkpoint_epochs)
 			{
