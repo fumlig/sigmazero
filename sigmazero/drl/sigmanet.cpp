@@ -219,15 +219,12 @@ int sigmanet_impl::get_input_channels() const
 }
 // z is model output value, v is mcts value, p is model output policy, pi is mcts policy
 torch::Tensor sigma_loss(torch::Tensor z, torch::Tensor v, torch::Tensor p, torch::Tensor pi) {
-    std::cerr << "start" << std::endl;
     //p = torch::add(p, 1e-8);
-    torch::Tensor value_loss = torch::mse_loss(z, v, torch::Reduction::Sum);
+    torch::Tensor value_loss = torch::mse_loss(z.squeeze(), v, torch::Reduction::Sum);
     torch::Tensor policy_loss = torch::cross_entropy_loss(p, pi);
-    std::cerr << value_loss.size(0) << ", " << policy_loss.size(0) << std::endl;
-    
     //torch::Tensor policy_loss = -torch::sum(torch::mul(pi, torch::log(p)));
     torch::Tensor loss = value_loss + policy_loss;
-    std::cerr << "end" << std::endl;
+
     return loss;
 }
 
