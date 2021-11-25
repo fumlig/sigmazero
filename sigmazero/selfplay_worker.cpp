@@ -21,7 +21,7 @@ const chess::game& selfplay_worker::get_game() const
 
 bool selfplay_worker::game_is_terminal(size_t max_game_size) const
 {
-    return game.is_terminal() || game.size() >= max_game_size;
+    return game.get_position().is_terminal() || game.size() >= max_game_size;
 }
 
 std::size_t selfplay_worker::replay_size() const

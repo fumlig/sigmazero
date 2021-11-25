@@ -12,7 +12,7 @@ function prefix {
 }
 
 function selfplay {
-	ssh olympen1-$1.ad.liu.se "$repo/build/selfplay $dir/$model" 2> >(prefix "selfplay$1" >&2)
+	ssh olympen1-1$1.ad.liu.se "$repo/build/selfplay $dir/$model" 2> >(prefix "selfplay$1" >&2)
 }
 
 function training {

@@ -32,7 +32,7 @@ model=model.pt
 Olympen example:
 
 ```bash
-./olympen.sh 101 101 102 102 103 103
+./olympen.sh 01 01 02 02 03 03
 ```
 
-This will create a directory `~/sigma_{datetime}` to which the latest model, checkpoints and logs will be written. The current olympen computer will be used as trainer and selfplay processes will be started on all hosts specified as arguments (ijk is olympen1-ijk). The tjack repo is assumed to be at `~/tjack` but its location can be set with the `SIGMA_REPO` variable. The training session directory can be set with `SIGMA_DIR`.
+This will create a directory `~/sigma_{datetime}` to which the latest model, checkpoints and logs will be written. The current olympen computer will be used as trainer and selfplay processes will be started on all hosts specified as arguments (NM is olympen1-1NM). The tjack repo is assumed to be at `~/tjack` but its location can be set with the `SIGMA_REPO` variable. The training session directory can be set with `SIGMA_DIR`.
