@@ -110,3 +110,9 @@ selfplay = executable(
 	['sigmazero/batch_selfplay.cpp', 'sigmazero/base64.cpp', 'sigmazero/selfplay_worker.cpp'] + sigmazero_src,
 	dependencies : [libchess_dep, torch_dep]
 )
+
+verification = executable(
+	'verification',
+	['sigmazero/verifications/loss_test_play.cpp', 'sigmazero/base64.cpp', 'sigmazero/selfplay_worker.cpp'] + sigmazero_src,
+	dependencies : [libchess_dep, torch_dep]
+)
