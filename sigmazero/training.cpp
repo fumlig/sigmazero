@@ -127,6 +127,7 @@ int main(int argc, char** argv)
 
 	unsigned batches_since_epoch = 0;
 	unsigned epochs_since_checkpoint = 0;
+	float epoch_running_loss = 0.0f;
 
 	bool first_replay = true;
 
@@ -179,11 +180,13 @@ int main(int argc, char** argv)
 				window_policies = torch::cat({window_policies, replay_policy}, 0);
 			}
 			received++;
+			shifted++;
 		}
 
 		if(shifted > 0)
 		{
-			std::cerr << "shifted " << shifted << " replay images into the window which has seen " << received << " items in total" << std::endl;
+			std::chrono::duration<float> window_duration = replay_timestamps.back() - replay_timestamps.front();
+			std::cerr << "shifted " << shifted << " replay images into the window which has seen a total of " << received << " replay images at a current rate of " << window_size/window_duration.count() << std::endl;
 		}
 
 		// wait for enough games to be available
@@ -221,17 +224,16 @@ int main(int argc, char** argv)
 		optimizer.step();
 
 		consumed += batch_size;
+		epoch_running_loss += loss.item<float>();
 
 		// update model
 		if(++batches_since_epoch == epoch_batches)
 		{
-			std::cerr << "epoch complete, loss on last batch: " << loss.item<float>() << std::endl;
-
-			std::chrono::duration<float> window_duration = replay_timestamps.back() - replay_timestamps.front();
-			std::cerr << "received: " << received << ", consumed: " << consumed << ", rate: " << window_size/window_duration.count() << std::endl;
-
-			batches_since_epoch = 0;
+			std::cerr << "epoch complete, average loss was " << epoch_running_loss/epoch_batches << std::endl;
 			
+			epoch_running_loss = 0.0f;
+			batches_since_epoch = 0;
+
 			torch::save(model, model_path);
 			std::cerr << "saved model " << model_path << std::endl;
 

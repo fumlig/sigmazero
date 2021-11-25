@@ -204,7 +204,7 @@ int main(int argc, char **argv)
 
 		iterations++;
 
-		std::cerr << "batch complete, " << terminal_count << " workers reset, " << iterations << "moves per batch, " << iterations*batch_size << " total moves" << std::endl;
+		std::cerr << "batch complete, " << terminal_count << " workers reset, " << iterations << " moves per batch, " << iterations*batch_size << " total moves" << std::endl;
 		std::cerr << "total terminations: " << win_terminations << " wins, " << draw_terminations << " draws, " << early_terminations << " early" << std::endl;
 	}
 	return 0;
