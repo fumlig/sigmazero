@@ -67,9 +67,9 @@ int main(int argc, char **argv)
 	std::cerr << "started with model " << model_path << std::endl;
 
 	// Sätt till 1.0 för att stänga av fast playouts
-	double full_search_prob = 1.0;
+	double full_search_prob = 0.25;
 	
-	int full_search_iterations = 400;
+	int full_search_iterations = 800;
 	int fast_search_iterations = 100;
 
 	std::bernoulli_distribution search_type_dist(full_search_prob);
@@ -78,8 +78,7 @@ int main(int argc, char **argv)
 	
 	std::vector<selfplay_worker> workers(batch_size);
 
-	unsigned long long total_moves = 0;
-	
+	unsigned long long iterations = 0;
 	unsigned long long win_terminations = 0;
 	unsigned long long draw_terminations = 0;
 	unsigned long long early_terminations = 0;
@@ -203,9 +202,9 @@ int main(int argc, char **argv)
 			}
 		}
 
-		total_moves += batch_size;
+		iterations++;
 
-		std::cerr << "batch complete, " << terminal_count << " workers reset, " << total_moves << " total moves" << std::endl;
+		std::cerr << "batch complete, " << terminal_count << " workers reset, " << iterations << "moves per batch, " << iterations*batch_size << " total moves" << std::endl;
 		std::cerr << "total terminations: " << win_terminations << " wins, " << draw_terminations << " draws, " << early_terminations << " early" << std::endl;
 	}
 	return 0;

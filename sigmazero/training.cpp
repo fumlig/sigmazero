@@ -115,7 +115,7 @@ int main(int argc, char** argv)
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 2048;
+	const std::size_t window_size = 4096;
 	const std::size_t batch_size = 128;
 
 	torch::Tensor window_images;
@@ -135,10 +135,7 @@ int main(int argc, char** argv)
 
 	while(true)
 	{
-		if(replay_queue.size())
-		{
-			std::cerr << "shifting " << replay_queue.size() << " replay images into the window" << std::endl;
-		}
+		int shifted = 0;
 
 		while(replay_queue.size())
 		{
@@ -182,6 +179,11 @@ int main(int argc, char** argv)
 				window_policies = torch::cat({window_policies, replay_policy}, 0);
 			}
 			received++;
+		}
+
+		if(shifted > 0)
+		{
+			std::cerr << "shifted " << shifted << " replay images into the window which has seen " << received << " items in total" << std::endl;
 		}
 
 		// wait for enough games to be available
