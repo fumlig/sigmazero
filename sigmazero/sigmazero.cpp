@@ -24,25 +24,16 @@ private:
     const float& pb_c_init;
 
 public:
-    sigmazero(const std::filesystem::path& model_path):
+    sigmazero(sigmanet model, torch::Device device):
     uci::engine(),
-    model(0, 128, 10),
-    device(torch::kCPU),
+    model(model),
+    device(device),
     game(),
     node(),
     pb_c_base{opt.add<uci::option_float>("PB C Base", 19652.0f).ref()},
     pb_c_init{opt.add<uci::option_float>("PB C Init", 1.25f).ref()}
     {
-        torch::load(model, model_path);
 
-        if(torch::cuda::is_available())
-        {
-            device = torch::Device(torch::kCUDA);
-        }
-
-        model->to(device);
-        model->eval();
-        model->zero_grad();
     }
 
     ~sigmazero()
@@ -157,16 +148,19 @@ public:
 
 int main(int argc, char** argv)
 {
-    std::filesystem::path model_path = "model.pt";
-
-    if(argc >= 2)
-    {
-        model_path = argv[1];
-    }
-
     chess::init();
-    
-    sigmazero engine(model_path);
+
+    std::filesystem::path model_path = argc >= 2 ? argv[1] : "model.pt";
+    torch::Device device(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU);
+    sigmanet model(0, 128, 10);
+
+    torch::load(model, model_path);
+
+    model->to(device);
+    model->eval();
+    model->zero_grad();
+
+    sigmazero engine(model, device);
     
     return uci::main(engine);
 }

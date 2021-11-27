@@ -506,7 +506,7 @@ int main(engine& engine)
             }
 
             stop = false;
-            info = search_info(); // does this go out of scope?
+            info = search_info();
             std::thread(search, std::ref(engine), std::ref(limit), std::ref(info), std::ref(ponder), std::ref(stop)).detach();
             // todo: might want to give over ownership of engine to search thread
         }
