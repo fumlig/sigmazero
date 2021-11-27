@@ -37,6 +37,7 @@ torch::Tensor residual_block::forward(torch::Tensor x) {
 
     return x;
 }
+
 // History unused currently
 sigmanet_impl::sigmanet_impl(int history, int filters, int blocks) : history{history}, in_channels{1*feature_planes + constant_planes}, filters{filters}, blocks{blocks} {
 

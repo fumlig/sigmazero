@@ -80,7 +80,14 @@ void selfplay_worker::output_game(std::ostream& stream)
         float terminal_value = game_value ? *game_value : 0.0f;
         torch::Tensor value = torch::tensor(terminal_value);
 
-        stream << encode(images[i]) << ' ' << encode(value) << ' ' << encode(policies[i]) << std::endl; //according to side
+        try
+        {
+            stream << encode(images[i]) << ' ' << encode(value) << ' ' << encode(policies[i]) << std::endl; //according to side
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << "exception raised when encoding and sending game tensors, skipping..." << std::endl;
+        }
     }
 }
 

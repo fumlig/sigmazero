@@ -18,7 +18,7 @@ class sync_queue {
     std::queue<T> container;
     std::mutex queue_lock;
     std::condition_variable queue_condition;
-    std::atomic_int queue_size{0};
+    std::atomic_size_t queue_size{0};
     static constexpr std::atomic_bool always_running = true;
 
 public:
@@ -29,7 +29,7 @@ public:
     /**
      * Returns the size of the queue
      */
-    int size()
+    size_t size()
     {
         return queue_size;
     }

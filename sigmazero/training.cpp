@@ -23,6 +23,12 @@
 #include "base64.hpp"
 
 
+struct replay_position
+{
+	torch::Tensor image, value, policy; 
+};
+
+
 static torch::Tensor decode(const std::string& data)
 {
     torch::Tensor tensor;
@@ -32,12 +38,23 @@ static torch::Tensor decode(const std::string& data)
 }
 
 
-static void replay_receiver(std::istream& stream, sync_queue<std::string>& queue)
+static void replay_receiver(std::istream& stream, sync_queue<replay_position>& queue)
 {
-	std::string replay;
-	while(std::getline(stream, replay))
+	std::string encoded_replay;
+	while(std::getline(stream, encoded_replay))
 	{
-		queue.push(replay);
+		try
+		{
+			std::string encoded_image, encoded_value, encoded_policy;
+			std::istringstream(encoded_replay) >> encoded_image >> encoded_value >> encoded_policy;
+			replay_position replay{decode(encoded_image), decode(encoded_value), decode(encoded_policy)};
+		
+			queue.push(replay);
+		}
+		catch(const std::exception& e)
+		{
+			std::cerr << "exception raised when receiving replay, ignoring it..." << std::endl;
+		}
 	}
 
 	std::cerr << "one replay stream was closed unexpectedly" << std::endl;
@@ -73,10 +90,9 @@ int main(int argc, char** argv)
 	
 	// receive selfplay replays
 	std::vector<std::ifstream> replay_files(argv+2, argv+argc);
-	sync_queue<std::string> replay_queue;
+	sync_queue<replay_position> replay_queue;
 	std::vector<std::reference_wrapper<std::istream>> replay_streams(replay_files.begin(), replay_files.end());
 	std::vector<std::thread> replay_threads;
-	std::queue<std::chrono::time_point<std::chrono::steady_clock>> replay_timestamps;
 
 	if(replay_streams.empty())
 	{
@@ -115,15 +131,15 @@ int main(int argc, char** argv)
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 4096;
-	const std::size_t batch_size = 128;
+	const std::size_t window_size = 16384;
+	const std::size_t batch_size = 256;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;
 	torch::Tensor window_policies;
 
-	const unsigned epoch_batches = 1024;	// save after this number of batches
-	const unsigned checkpoint_epochs = 32;	// checkpoint after this number of saves
+	const unsigned epoch_batches = 512;		// save after this number of batches
+	const unsigned checkpoint_epochs = 64;	// checkpoint after this number of saves
 
 	unsigned batches_since_epoch = 0;
 	unsigned epochs_since_checkpoint = 0;
@@ -137,56 +153,55 @@ int main(int argc, char** argv)
 	while(true)
 	{
 		int shifted = 0;
+		int discarded = 0;
+
+		std::size_t incoming_replays = replay_queue.size();
+		
+		std::vector<torch::Tensor> replay_images;
+		std::vector<torch::Tensor> replay_values;
+		std::vector<torch::Tensor> replay_policies;
+
+		replay_images.reserve(incoming_replays);
+		replay_values.reserve(incoming_replays);
+		replay_policies.reserve(incoming_replays);
 
 		while(replay_queue.size())
 		{
-			std::string replay = replay_queue.pop();
-			replay_timestamps.push(std::chrono::steady_clock::now());
-
-			std::string encoded_image;
-			std::string encoded_value;
-			std::string encoded_policy;
-
-			std::istringstream(replay) >> encoded_image >> encoded_value >> encoded_policy;
-
-			torch::Tensor replay_image;
-			torch::Tensor replay_value;
-			torch::Tensor replay_policy;
-
-			try
+			while(replay_queue.size() > window_size/4)
 			{
-				replay_image = decode(encoded_image).unsqueeze(0);
-				replay_value = decode(encoded_value).unsqueeze(0);
-				replay_policy = decode(encoded_policy).unsqueeze(0);
+				// congested replay queue
+				replay_queue.pop();
+				discarded++;
 			}
-			catch(const std::exception& e)
-			{
-				std::cerr << "exception raised when decoding replay tensors" << std::endl;
-				std::cerr << "image: " << encoded_image << ", value: " << encoded_value << ", policy: " << encoded_policy << std::endl;
-				continue;
-			}
-			
-			if(first_replay)
-			{
-				first_replay = false;
-				window_images = replay_image;
-				window_values = replay_value;
-				window_policies = replay_policy;
-			}
-			else
-			{
-				window_images = torch::cat({window_images, replay_image}, 0);
-				window_values = torch::cat({window_values, replay_value}, 0);
-				window_policies = torch::cat({window_policies, replay_policy}, 0);
-			}
+
+			replay_position replay = replay_queue.pop();
+
+			replay_images.push_back(replay.image);
+			replay_values.push_back(replay.value);
+			replay_policies.push_back(replay.policy);
+
 			received++;
 			shifted++;
 		}
 
 		if(shifted > 0)
 		{
-			std::chrono::duration<float> window_duration = replay_timestamps.back() - replay_timestamps.front();
-			std::cerr << "shifted " << shifted << " replay images into the window which has seen a total of " << received << " replay images at a current rate of " << window_size/window_duration.count() << std::endl;
+			std::cerr << "window: " << shifted << " shifted, " << discarded << " discarded, " << received << " received, " << consumed << " consumed" << std::endl;
+		
+			if(first_replay)
+			{
+				first_replay = false;
+
+				window_images = torch::stack(replay_images);
+				window_values = torch::stack(replay_values);
+				window_policies = torch::stack(replay_policies);
+			}
+			else
+			{
+				window_images = torch::cat({window_images, torch::stack(replay_images)});
+				window_values = torch::cat({window_values, torch::stack(replay_values)});
+				window_policies = torch::cat({window_policies, torch::stack(replay_policies)});
+			}
 		}
 
 		// wait for enough games to be available
@@ -194,18 +209,13 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+		
 		// remove old replays
 		torch::indexing::Slice window_slice(-window_size);
 
 		window_images = window_images.index({window_slice});
 		window_values = window_values.index({window_slice});
 		window_policies = window_policies.index({window_slice});
-
-		// remove old timestamps
-		while(replay_timestamps.size() > window_size)
-		{
-			replay_timestamps.pop();
-		}
 
 		// sample batch of replays
 		torch::Tensor batch_sample = torch::randint(window_size, {batch_size}).to(torch::kLong);
@@ -229,15 +239,13 @@ int main(int argc, char** argv)
 		// update model
 		if(++batches_since_epoch == epoch_batches)
 		{
-			std::cerr << "epoch complete, average loss was " << epoch_running_loss/epoch_batches << std::endl;
+			std::cerr << "epoch: " << epoch_running_loss/epoch_batches << " average loss, " << epoch_running_loss << " running loss, " << epochs_since_checkpoint << "/" << checkpoint_epochs << " to checkpoint" << std::endl;
 			
 			epoch_running_loss = 0.0f;
 			batches_since_epoch = 0;
 
 			torch::save(model, model_path);
 			std::cerr << "saved model " << model_path << std::endl;
-
-			std::cerr << epochs_since_checkpoint << "/" << checkpoint_epochs << " epochs until checkpoint" << std::endl;
 
 			if(++epochs_since_checkpoint == checkpoint_epochs)
 			{
@@ -250,7 +258,6 @@ int main(int argc, char** argv)
 				
 				std::filesystem::path checkpoint_path = out.str();
 				std::filesystem::copy_file(model_path, checkpoint_path);
-				
 				std::cerr << "saved checkpoint " << checkpoint_path << std::endl;
 			}
 		}

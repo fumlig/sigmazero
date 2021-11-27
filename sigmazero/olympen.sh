@@ -21,7 +21,7 @@ function training {
 
 function command
 {
-	eval "training $(printf '<(selfplay %s) ' $@)" 2> >(tee $log)
+	eval "training $(printf '<(selfplay %s) ' $@)" 2> >(tee -a $log)
 }
 
 echo "olympen session"

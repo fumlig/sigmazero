@@ -78,10 +78,17 @@ int main(int argc, char **argv)
 	
 	std::vector<selfplay_worker> workers(batch_size);
 
-	unsigned long long iterations = 0;
-	unsigned long long win_terminations = 0;
-	unsigned long long draw_terminations = 0;
-	unsigned long long early_terminations = 0;
+	long iterations = 0;
+	
+	long win_terminations = 0;
+	long draw_terminations = 0;
+	long early_terminations = 0;
+
+	long white_wins = 0;
+	long black_wins = 0;
+
+	long full_searches = 0;
+	long fast_searches = 0; 
 
 	while (true)
 	{
@@ -102,8 +109,6 @@ int main(int argc, char **argv)
 			}
 		}
 	
-		std::cerr << "checked for new model" << std::endl;
-
 		std::vector<chess::position> positions_to_evaluate(batch_size);
 		std::vector<bool> position_mask(batch_size);
 		
@@ -115,20 +120,17 @@ int main(int argc, char **argv)
 		// Evaluate
 		auto evaluation = model->evaluate_batch(positions_to_evaluate, device);
 		
-		std::cerr << "batch evaluated" << std::endl;
-
 		for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx) 
 		{
 			workers[worker_idx].initial_setup(evaluation[worker_idx]);
 		}
-
-		std::cerr << "workers setup" << std::endl;
 	
 		// Do tha search
 		bool do_full_search = search_type_dist(get_generator());
 		int iters = do_full_search ? full_search_iterations : fast_search_iterations;
 
-		std::cerr << "doing " << (do_full_search ? "full" : "fast") << " search" << std::endl;
+		full_searches += do_full_search;
+		fast_searches += !do_full_search;
 
 		for(int i = 0 ; i < iters ; ++i)
 		{
@@ -153,48 +155,39 @@ int main(int argc, char **argv)
 			}
 		}
 
-		std::cerr << "mcts step done" << std::endl;
-
 		int terminal_count = 0;
 
 		// Make the best moves
 		for(int worker_idx = 0 ; worker_idx < batch_size ; ++worker_idx)
 		{
 			selfplay_worker& worker = workers.at(worker_idx);
-
-			chess::move move = worker.make_best_move(model->encode_input(worker.get_position()), do_full_search);
-			//std::cerr << "worker " << worker_idx << ": " << move.to_lan() << std::endl;
+			worker.make_best_move(model->encode_input(worker.get_position()), do_full_search);
 			
 			// Output game and reset worker
 			if(worker.game_is_terminal()) 
 			{
-				if(worker.replay_size() == 0)
+				if(worker.replay_size() > 0)
 				{
-					std::cerr << "worker " << worker_idx << " terminal with replay size " << 0 << ", skipping send" << std::endl;
-				}
-				else
-				{
-					std::cerr << "worker " << worker_idx << " sending replay of size " << worker.replay_size() << " with " << workers[worker_idx].get_game().size() << " moves: ";
-					for(const auto& [move, _]: workers[worker_idx].get_game().get_history())
-					{
-						std::cerr << move.to_lan() << " ";
-					}
+					std::cerr << "replay: " << worker.replay_size() << " images, " << worker.get_game().size() << " plies" << std::endl;
+					std::cerr << "moves: ";
+					for(const auto& [move, _]: worker.get_game().get_history()) std::cerr << move.to_lan() << " ";
 					std::cerr << std::endl;
+
 					workers[worker_idx].output_game(std::cout);
 				}
 
-				std::optional<float> score = worker.get_game().get_score();
-				if(!score)
+				std::optional<int> score = worker.get_game().get_value();
+				if(score)
 				{
-					early_terminations++;
-				}
-				else if(*score == 0.0f)
-				{
-					draw_terminations++;
+					white_wins += *score == 1;
+					black_wins += *score == -1;
+
+					draw_terminations += *score == 0;
+					win_terminations += *score != 0;
 				}
 				else
 				{
-					win_terminations++;
+					early_terminations++;
 				}
 
 				workers[worker_idx] = selfplay_worker();
@@ -204,8 +197,10 @@ int main(int argc, char **argv)
 
 		iterations++;
 
-		std::cerr << "batch complete, " << terminal_count << " workers reset, " << iterations << " moves per batch, " << iterations*batch_size << " total moves" << std::endl;
-		std::cerr << "total terminations: " << win_terminations << " wins, " << draw_terminations << " draws, " << early_terminations << " early" << std::endl;
+		std::cerr << "batch: " << terminal_count << " terminations, " << iterations << " iterations, " << iterations*batch_size << " moves" << std::endl;
+		std::cerr << "terminations: " << win_terminations << " wins, " << draw_terminations << " draws, " << early_terminations << " early" << std::endl;
+		std::cerr << "wins: " << white_wins << " white, " << black_wins << " black" << std::endl;
+		std::cerr << "searches: " << full_searches << " full, " << fast_searches << " fast" << std::endl;
 	}
 	return 0;
 }
