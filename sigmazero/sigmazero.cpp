@@ -7,8 +7,8 @@
 #include <uci/uci.hpp>
 #include <torch/torch.h>
 
-#include "drl/sigmanet.hpp"
-#include "mcts/node.hpp"
+#include "sigmanet.hpp"
+#include "mcts.hpp"
 
 
 class sigmazero: public uci::engine

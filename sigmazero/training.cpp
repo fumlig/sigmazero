@@ -18,7 +18,8 @@
 #include <chess/chess.hpp>
 #include <torch/torch.h>
 
-#include "drl/sigmanet.hpp"
+#include "sigmanet.hpp"
+#include "rules.hpp"
 #include "sync_queue.hpp"
 #include "base64.hpp"
 
@@ -75,7 +76,8 @@ int main(int argc, char** argv)
 
 	// setup initial model
 	std::filesystem::path model_path(argv[1]);
-	sigmanet model(0, 128, 10);
+	
+	sigmanet model = make_network();
 
 	if(std::filesystem::exists(model_path))
 	{
@@ -122,16 +124,18 @@ int main(int argc, char** argv)
 
 	model->train();
 	model->to(device);
-	torch::optim::SGD optimizer(model->parameters(), torch::optim::SGDOptions(0.01).momentum(0.9).weight_decay(0.0001)); // varying lr
+	
+	//torch::optim::SGD optimizer(model->parameters(), torch::optim::SGDOptions(0.2).momentum(0.9).weight_decay(0.0001)); // varying lr
 
+	torch::optim::Adam optimizer(model->parameters());// torch::optim::AdamOptions(0.2));
 
 	// statistics
 	unsigned long long received = 0;
 	unsigned long long consumed = 0;
 
 	// replay window
-	const std::size_t window_size = 16384;
-	const std::size_t batch_size = 256;
+	const std::size_t window_size = 1 << 14;
+	const std::size_t batch_size = 512;
 
 	torch::Tensor window_images;
 	torch::Tensor window_values;
