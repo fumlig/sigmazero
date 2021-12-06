@@ -8,7 +8,8 @@
 #include <torch/torch.h>
 
 #include "sigmanet.hpp"
-#include "mcts.hpp"
+#include "search.hpp"
+#include "rules.hpp"
 
 
 class sigmazero: public uci::engine
@@ -16,22 +17,15 @@ class sigmazero: public uci::engine
 private:
     sigmanet model;
     torch::Device device;
-    
     chess::game game;
-    std::shared_ptr<mcts::Node> node;
-
-    const float& pb_c_base;
-    const float& pb_c_init;
-
+    std::shared_ptr<node> next;
+    
 public:
     sigmazero(sigmanet model, torch::Device device):
     uci::engine(),
     model(model),
     device(device),
-    game(),
-    node(),
-    pb_c_base{opt.add<uci::option_float>("PB C Base", 19652.0f).ref()},
-    pb_c_init{opt.add<uci::option_float>("PB C Init", 1.25f).ref()}
+    game()
     {
 
     }
@@ -54,39 +48,35 @@ public:
     void setup(const chess::position& position, const std::vector<chess::move>& moves) override
     {
         game = chess::game(position, moves);
-        node = std::make_shared<mcts::Node>(game.get_position());
+        std::cerr << game.to_string() << std::endl;
     }
 
     uci::search_result search(const uci::search_limit& limit, uci::search_info& info, const std::atomic_bool& ponder, const std::atomic_bool& stop) override
     {
+        long simulations = 0;
         auto start_time = std::chrono::steady_clock::now();
 
-        const chess::position& position = game.get_position();
-        chess::side turn = position.get_turn();
-
+        chess::side turn = game.get_position().get_turn();
         float clock = limit.clocks[turn];
         float increment = limit.increments[turn];
 
         // https://chess.stackexchange.com/questions/2506/what-is-the-average-length-of-a-game-of-chess
         int ply = game.size();
         int remaining_halfmoves = 59.3 + (72830 - 2330*ply)/(2644 + ply*(10 + ply));
-        float budgeted_time = (clock + increment*remaining_halfmoves)/remaining_halfmoves;
+        float budgeted_time = clock/remaining_halfmoves; // todo: increment
+        
 
         info.message("budgeted time: " + std::to_string(budgeted_time));
-
-        mcts::Node::pb_c_base = pb_c_base;
-        mcts::Node::pb_c_init = pb_c_init;
-
-        auto evaluation = model->evaluate(game.get_position(), device);
-        
-        node->explore_and_set_priors(evaluation);
-
-        unsigned simulations = 0;
-
         info.message("starting simulations");
 
-        while(!stop)
+        // limit, info, std::ref(ponder), std::ref(stop), simulations, start_time, budgeted_time
+        auto done = [&]()
         {
+            if(stop)
+            {
+                return true;
+            }
+
             auto current_time = std::chrono::steady_clock::now();
             float elapsed_time = std::chrono::duration<float>(current_time - start_time).count();
             
@@ -97,51 +87,38 @@ public:
                 if(elapsed_time > limit.time)
                 {
                     info.message("stopping search due to time limit");
-                    break;
+                    return true;
                 }
 
                 if(elapsed_time > budgeted_time)
                 {
                     info.message("stopping search due to budgeted time exceeded");
-                    break;
+                    return true;
                 }
             }
-        
-            std::shared_ptr<mcts::Node> n = node->traverse();
-
-            if(n->is_over())
-            {
-                n->backpropagate(n->get_terminal_value());
-                continue;
-            }
-            
-            evaluation = model->evaluate(n->get_state(), device);
-            n->explore_and_set_priors(evaluation);
-
-            simulations++;
 
             // not really correct but whatever...
-            info.depth(simulations);
-        }
+            simulations++;
 
-        chess::move best, ponder_move;
-        
-        if(node->best_child())
-        {
-            best = node->best_child()->get_move();
-        
-            if(node->best_child()->best_child())
-            {
-                ponder_move = node->best_child()->best_child()->get_move();
-            }
-        }
+            return false;
+        };
 
-        return {best, ponder_move};
+        std::shared_ptr<node> best = run_mcts(game, model, device, done, false);
+        next = best->select_best();
+        
+        uci::search_result result;
+        result.best = best->move;
+        if(next) result.ponder = next->move;
+
+        info.score(best->value());
+        info.depth(simulations);
+
+        return result;
     }
 
     void reset() override
     {
-
+	next = nullptr;
     }
 };
 
@@ -152,7 +129,7 @@ int main(int argc, char** argv)
 
     std::filesystem::path model_path = argc >= 2 ? argv[1] : "model.pt";
     torch::Device device(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU);
-    sigmanet model(0, 128, 10);
+    sigmanet model = make_network();
 
     torch::load(model, model_path);
 

@@ -10,25 +10,41 @@
 #include "sigmanet.hpp"
 
 
-const int feature_planes = 6 + 6 + 2; // p1 piece, p2 piece, repetitions
-const int constant_planes = 1 + 1 + 2 + 2 + 1; // colour, total move count, p1 castling, p2 castling, no-progress count
+const int p1_piece_planes = 6;
+const int p2_piece_planes = 6;
+const int repetition_planes = 2;
+const int feature_planes = p1_piece_planes + p2_piece_planes + repetition_planes;
 
-const int sliding_actions = 7*8; // 8 directions, 7 squares in each direction
-const int knight_actions = 8; // 8 directions
-const int underpromotion_actions = 3*3; // 3 directions, 3 underpromotions pieces
+const int color_planes = 1;
+const int move_count_planes = 1;
+const int p1_castling_planes = 2;
+const int p2_castling_planes = 2;
+const int no_progress_planes = 1;
+const int constant_planes = color_planes + move_count_planes + p1_castling_planes + p2_castling_planes + no_progress_planes;
 
-const int actions_per_square = sliding_actions + knight_actions + underpromotion_actions;
+const int underpromotion_directions = 3;
+const int underpromotion_pieces = 3;
+const int underpromotion_actions = underpromotion_directions*underpromotion_pieces;
+
+const int knight_directions = 8;
+const int knight_actions = knight_directions;
+
+const int sliding_directions = 8;
+const int sliding_magnitudes = 7;
+const int sliding_actions = sliding_directions*sliding_magnitudes;
+
+const int actions_per_square = underpromotion_actions + knight_actions + sliding_actions;
 const int num_actions = 64*actions_per_square;
 
 
-int move_action(chess::move move, chess::side turn = chess::side_white);
-
-chess::move action_move(int action, chess::side turn = chess::side_white);
+int move_action(chess::move move, const chess::game& game);
 
 torch::Tensor game_image(const chess::game& game, int history = 2);
 
-sigmanet make_network(int history = 2);
+sigmanet make_network(int history = 2, int filters = 128, int blocks = 10);
 
+
+float material_value(const chess::game& game, chess::side side = chess::side_white);
 
 
 #endif

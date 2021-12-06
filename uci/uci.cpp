@@ -269,10 +269,11 @@ void search_info::line(const std::vector<chess::move>& best)
     push_message(out.str());
 }
 
-void search_info::score(float centipawn)
+void search_info::score(float pawn)
 { 
 	std::ostringstream out;
-	out << "info score cp " << static_cast<int>(centipawn);
+    int centipawn = pawn*100;
+	out << "info score cp " << centipawn;
     push_message(out.str());
 }
 
@@ -367,11 +368,11 @@ int main(engine& engine)
     {
     	std::string line;
         std::getline(std::cin, line);
-        std::istringstream stream(line);
+        std::istringstream in(line);
 		std::string command;
 		std::string dummy; // used for ignoring redundant parameters
 
-		stream >> command;
+		in >> command;
 
         if(command == "uci")
         {
@@ -386,10 +387,10 @@ int main(engine& engine)
 		}
 		else if(command == "setoption")
 		{
-            stream >> dummy;
+            in >> dummy;
 
-			std::string name = extract_until(stream, "value");
-            std::string value = extract_until(stream);
+			std::string name = extract_until(in, "value");
+            std::string value = extract_until(in);
 
 			engine.opt.set(name, value);
 		}
@@ -399,26 +400,14 @@ int main(engine& engine)
         }
         else if(command == "position")
         {
-            std::string fen;
-            stream >> fen;
-
-            if(fen == "startpos")
-            {
-                fen = chess::position::fen_start;
-            }
-            else
-            {
-                stream >> fen;
-            }
-
-            chess::position position = chess::position::from_fen(fen);
+            chess::position position = chess::position::from_fen(in);
 
             std::string lan;
             std::vector<chess::move> moves;
 
-            stream >> dummy;
+            in >> dummy;
 
-            while(stream >> lan)
+            while(in >> lan)
             {
                 chess::move move = chess::move::from_lan(lan);
                 moves.push_back(move);
@@ -430,12 +419,12 @@ int main(engine& engine)
         {
             search_limit limit;
 
-            while(stream >> command)
+            while(in >> command)
             {
                 if(command == "searchmoves")
                 {
                     std::string lan;
-                    while(stream >> lan)
+                    while(in >> lan)
                     {
                         chess::move move = chess::move::from_lan(lan);
                         limit.moves.push_back(move);
@@ -448,55 +437,55 @@ int main(engine& engine)
                 else if(command == "wtime")
                 {
                     std::string clock;
-                    stream >> clock;
+                    in >> clock;
                     limit.clocks[chess::side_white] = std::stoi(clock) / 1000.0f; // ms to s
                 }
                 else if(command == "btime")
                 {
                     std::string clock;
-                    stream >> clock;
+                    in >> clock;
                     limit.clocks[chess::side_black] = std::stoi(clock) / 1000.0f; // ms to s
                 }
                 else if(command == "winc")
                 {
                     std::string increment;
-                    stream >> increment;
+                    in >> increment;
                     limit.increments[chess::side_white] = std::stoi(increment) / 1000.0f; // ms to s
                 }
                 else if(command == "binc")
                 {
                     std::string increment;
-                    stream >> increment;
+                    in >> increment;
                     limit.increments[chess::side_black] = std::stoi(increment) / 1000.0f; // ms to s
                 }
                 else if(command == "movestogo")
                 {
                     std::string remaining;
-                    stream >> remaining;
+                    in >> remaining;
                     limit.remaining_moves = std::stoi(remaining);
                 }
                 else if(command == "depth")
                 {
                     std::string depth;
-                    stream >> depth;
+                    in >> depth;
                     limit.depth = std::stoi(depth);
                 }
                 else if(command == "nodes")
                 {
                     std::string nodes;
-                    stream >> nodes;
+                    in >> nodes;
                     limit.nodes = std::stoi(nodes);
                 }
                 else if(command == "mate")
                 {
                     std::string mate;
-                    stream >> mate;
+                    in >> mate;
                     limit.mate = std::stoi(mate);
                 }
                 else if(command == "movetime")
                 {
                     std::string time;
-                    stream >> time;
+                    in >> time;
                     limit.time = std::stoi(time) / 1000.0f; // ms to s
                 }
                 else if(command == "infinite")

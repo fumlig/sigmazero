@@ -5,162 +5,167 @@
 #include "rules.hpp"
 
 
-static const std::array<chess::direction, 8> sliding_directions =
+int move_action(chess::move move, const chess::game& game)
 {
-    chess::direction_n,
-    chess::direction_e,
-    chess::direction_s,
-    chess::direction_w,
-	chess::direction_ne,
-    chess::direction_se,
-    chess::direction_sw,
-    chess::direction_nw,
-};
+    const chess::position& position = game.get_position();
+    const chess::board& board = position.get_board();
 
-static const std::array<chess::direction, 8> knight_directions =
-{
-	chess::direction_nne,
-    chess::direction_ene,
-    chess::direction_ese,
-    chess::direction_sse,
-    chess::direction_ssw,
-    chess::direction_wsw,
-    chess::direction_wnw,
-    chess::direction_nnw,
-};
+    const int underpromotion_type = 0;
+    const int knight_type = underpromotion_type + underpromotion_actions;
+    const int sliding_type = knight_type + knight_actions;
 
-static const std::array<chess::direction, 3> underpromotion_directions =
-{
-    chess::direction_w,
-    chess::direction_n,
-    chess::direction_e,
-};
+    auto [side, piece] = board.get(move.from);
 
-static const std::array<chess::piece, 3> underpromotion_pieces =
-{
-    chess::piece_rook,
-    chess::piece_knight,
-    chess::piece_bishop,
-};
-
-
-struct move_hash
-{
-    std::size_t operator()(const chess::move& m) const noexcept
+    if(position.get_turn() == chess::side_black)
     {
-        return ((m.from & 0xFF) << 0) | ((m.to & 0xFF) << 8) | ((m.promote & 0xFF) << 16);
-    }
-};
-
-struct move_pred
-{
-    bool operator()(const chess::move& m1, const chess::move& m2) const noexcept
-    {
-        return m1.from == m2.from && m1.to == m2.to && m1.promote == m2.promote;
-    }
-};
-
-
-static std::unordered_map<chess::move, int, move_hash, move_pred> move_to_action_mapping;
-static std::unordered_map<int, chess::move> action_to_move_mapping;
-
-
-static void init_action_mappings()
-{
-    static bool done = false;
-
-    if(done)
-    {
-        return;
+        move.from = chess::flip(move.from);
+        move.to = chess::flip(move.to);
     }
 
-    int action = 0;
+    int square = move.from;
+    int type = -1;
 
-    for(int from = chess::square_a1; from <= chess::square_h8; from++)
+    if(piece == chess::piece_pawn && chess::rank_of(move.to) == chess::rank_8 && move.promote != chess::piece_queen)
+    {
+        // underpromotion
+        int direction = -1;
+        int promotion = -1;
+        
+        switch(chess::direction_of(move.from, move.to))
+        {
+        case chess::direction_nw:
+            direction = 0;
+            break;
+        case chess::direction_n:
+            direction = 1;
+            break;
+        case chess::direction_ne:
+            direction = 2;
+            break;
+        default:
+            throw std::logic_error("move action of invalid underpromotion direction");
+        }
+
+        switch(move.promote)
+        {
+        case chess::piece_rook:
+            promotion = 0;
+            break;
+        case chess::piece_knight:
+            promotion = 1;
+            break;
+        case chess::piece_bishop:
+            promotion = 2;
+            break;
+        default:
+            throw std::logic_error("move action of invalid underpromotion piece");
+        }
+
+        type = underpromotion_type + direction*underpromotion_pieces + promotion;
+    }
+    else if(piece == chess::piece_knight)
+    {
+        // knight
+        int direction = -1;
+
+        switch(chess::direction_of(move.from, move.to))
+        {
+        case chess::direction_nne:
+            direction = 0;
+            break;
+        case chess::direction_ene:
+            direction = 1;
+            break;
+        case chess::direction_ese:
+            direction = 2;
+            break;
+        case chess::direction_sse:
+            direction = 3;
+            break;
+        case chess::direction_ssw:
+            direction = 4;
+            break;
+        case chess::direction_wsw:
+            direction = 5;
+            break;
+        case chess::direction_wnw:
+            direction = 6;
+            break;
+        case chess::direction_nnw:
+            direction = 7;
+            break;
+        default:
+            throw std::logic_error("move action of invalid knight direction " + std::to_string(chess::direction_of(move.from, move.to)));
+        }
+
+        type = knight_type + direction;
+    }
+    else
     {
         // sliding
-        for(int i = 0; i < 8; i++)
+        int direction = -1;
+        int magnitude = -1;
+        
+        int steps = 0;
+        int file_delta = chess::file_of(move.from) != chess::file_of(move.to);
+        int rank_delta = chess::rank_of(move.from) != chess::rank_of(move.to);
+
+        if(file_delta != 0)
         {
-            int direction = sliding_directions[i];
-            
-            for(int j = 0; j < 7; j++)
-            {
-                int magnitude = j+1;
-                int to = from + direction*magnitude;
-
-                chess::move move(static_cast<chess::square>(from), static_cast<chess::square>(to));
-
-                move_to_action_mapping[move] = action;
-                action_to_move_mapping[action] = move;
-
-                action++;
-            }
+            steps = std::abs(file_delta);
+        }
+        else if(rank_delta != 0)
+        {
+            steps = std::abs(rank_delta);
+        }
+        else
+        {
+            throw std::logic_error("move action of sliding move with magnitude zero");
         }
 
-        // knight
-        for(int i = 0; i < 8; i++)
+        magnitude = steps - 1;
+
+        chess::square step = chess::cat_coords
+        (
+            static_cast<chess::file>(chess::file_of(move.from) + file_delta/steps),
+            static_cast<chess::rank>(chess::rank_of(move.from) + rank_delta/steps)
+        );
+
+        switch(chess::direction_of(move.from, step))
         {
-            int direction = knight_directions[i];
-            int to = from + direction;
 
-            chess::move move(static_cast<chess::square>(from), static_cast<chess::square>(to));
-
-            move_to_action_mapping[move] = action;
-            action_to_move_mapping[action] = move;
-
-            action++;
+        case chess::direction_n:
+            direction = 0;
+            break;
+        case chess::direction_e:
+            direction = 1;
+            break;
+        case chess::direction_s:
+            direction = 2;
+            break;
+        case chess::direction_w:
+            direction = 3;
+            break;
+        case chess::direction_ne:
+            direction = 4;
+            break;
+        case chess::direction_se:
+            direction = 5;
+            break;
+        case chess::direction_sw:
+            direction = 6;
+            break;
+        case chess::direction_nw:
+            direction = 7;
+            break;
+        default:
+            throw std::logic_error("move action of invalid sliding direction");
         }
 
-        // pawn
-        for(int i = 0; i < 3; i++)
-        {
-            int direction = underpromotion_directions[i];
-
-            for(int j = 0; j < 3; j++)
-            {
-                int to = from + direction;
-                int promote = underpromotion_pieces[j];
-
-                chess::move move(static_cast<chess::square>(from), static_cast<chess::square>(to), static_cast<chess::piece>(promote));
-
-                move_to_action_mapping[move] = action;
-                action_to_move_mapping[action] = move;
-
-                action++;
-            }
-        }
+        type = sliding_type + direction*sliding_magnitudes + magnitude;
     }
 
-    done = true;
-}
-
-
-int move_action(chess::move move, chess::side turn)
-{
-    init_action_mappings();
-    
-    if(turn == chess::side_black)
-    {
-        move.from = chess::flip(move.from);
-        move.to = chess::flip(move.to);
-    }
-
-    return move_to_action_mapping[move];
-}
-
-chess::move action_move(int action, chess::side turn)
-{
-    init_action_mappings();
-
-    chess::move move = action_to_move_mapping[action];
-
-    if(turn == chess::side_black)
-    {
-        move.from = chess::flip(move.from);
-        move.to = chess::flip(move.to);
-    }
-
-    return move;
+    return square*actions_per_square + type;
 }
 
 
@@ -185,27 +190,28 @@ torch::Tensor game_image(const chess::game& game, int history)
 {
     using namespace torch::indexing;
 
-    chess::game scratch = game;
-    const chess::position& position = game.get_position();
-    const chess::board& board = position.get_board();
+    chess::side p1 = game.get_position().get_turn();
+    chess::side p2 = chess::opponent(p1);
 
     const int planes = feature_planes*history + constant_planes;
     torch::Tensor input = torch::zeros({planes, 8, 8});
 
     int j = 0;
-    chess::side p1 = position.get_turn();
-    chess::side p2 = chess::opponent(p1);
 
     // feature planes
-    int n = std::min(history, static_cast<int>(scratch.size()+1));
+    int n = std::min(history, static_cast<int>(game.size()+1));
     bool flip = p1 == chess::side_black;
+    chess::game g = game;
 
     for(int i = 0; i < n; i++)
     {
+        const chess::position& p = g.get_position();
+        const chess::board& b = p.get_board();
+
         // p1 pieces
         for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
         {
-            chess::bitboard bb = board.piece_set(static_cast<chess::piece>(p), p1);
+            chess::bitboard bb = b.piece_set(static_cast<chess::piece>(p), p1);
             torch::Tensor plane = bitboard_plane(bb);
             if(flip) plane = torch::flipud(plane);
 
@@ -215,7 +221,7 @@ torch::Tensor game_image(const chess::game& game, int history)
         // p2 pieces
         for(int p = chess::piece_pawn; p <= chess::piece_king; p++)
         {
-            chess::bitboard bb = board.piece_set(static_cast<chess::piece>(p), p2);
+            chess::bitboard bb = b.piece_set(static_cast<chess::piece>(p), p2);
             torch::Tensor plane = bitboard_plane(bb);
             if(flip) plane = torch::flipud(plane);
 
@@ -223,7 +229,7 @@ torch::Tensor game_image(const chess::game& game, int history)
         }
 
         // repetitions
-        int repetitions = scratch.get_repetitions();
+        int repetitions = g.get_repetitions();
 
         if(repetitions >= 1)
         {
@@ -236,15 +242,16 @@ torch::Tensor game_image(const chess::game& game, int history)
         } j++;
 
         // previous position (if not at initial, in which case the loop will end)
-        if(!scratch.empty())
+        if(!g.empty())
         {
-            scratch.pop();
+            g.pop();
         }
     }
 
     j = feature_planes*history;
 
     // constant planes
+    const chess::position& position = game.get_position();
 
     // color
     input.index_put_({j++}, static_cast<int>(p1));
@@ -267,7 +274,32 @@ torch::Tensor game_image(const chess::game& game, int history)
 
 }
 
-sigmanet make_network(int history)
+sigmanet make_network(int history, int filters, int blocks)
 {
-    return sigmanet(feature_planes*history + constant_planes, 128, 10);
+    return sigmanet(feature_planes*history + constant_planes, filters, blocks);
+}
+
+
+float material_value(const chess::game& game, chess::side side)
+{
+	const chess::board& board = game.get_position().get_board();
+
+	float p1_value = 0.0f;
+	float p2_value = 0.0f;
+
+	for(int p = chess::piece_pawn; p < chess::piece_king; p++)
+	{
+		chess::piece piece = static_cast<chess::piece>(p);
+		p1_value += chess::value_of(piece) * chess::set_cardinality(board.piece_set(piece, side));
+		p2_value += chess::value_of(piece) * chess::set_cardinality(board.piece_set(piece, chess::opponent(side)));
+	}
+
+	if(p1_value + p2_value == 0.0f)
+	{
+		return 0.0f;
+	}
+	else
+	{
+		return (p1_value - p2_value) / (p1_value + p2_value);
+	}
 }

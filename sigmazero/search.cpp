@@ -1,7 +1,7 @@
 #include <limits>
 
-#include "mcts.hpp"
-#include "util.hpp"
+#include "search.hpp"
+#include "utility.hpp"
 #include "sigmanet.hpp"
 #include "rules.hpp"
 
@@ -22,7 +22,7 @@ float node::value() const
 }
 
 
-void node::expand(const chess::game& game, const torch::Tensor value, const torch::Tensor policy)
+void node::expand(const chess::game& game, const torch::Tensor policy)
 {
     turn = game.get_position().get_turn();
 
@@ -38,19 +38,17 @@ void node::expand(const chess::game& game, const torch::Tensor value, const torc
 
     for(chess::move move: legal_moves)
     {
-        int action = move_action(move, turn);
-        policy_sum += policy_exp.index({action}).item<float>();
+        policy_sum += policy_exp.index({move_action(move, game)}).item<float>();
     }
 
     for(chess::move move: legal_moves)
     {
         std::shared_ptr<node> child = std::make_shared<node>();
-        int action = move_action(move, turn);
 
-        child->prior = policy_exp.index({action}).item<float>()/policy_sum;
+        child->action = move_action(move, game);
         child->move = move;
-        child->action = action;
         child->turn = chess::opponent(turn);
+        child->prior = policy_exp.index({child->action}).item<float>()/policy_sum;
 
         children.push_back(child);
     }
@@ -76,22 +74,22 @@ std::shared_ptr<node> node::select_child() const
     return selected;
 }
 
-chess::move node::select_move() const
+std::shared_ptr<node> node::select_best() const
 {
     int max_visit_count = -std::numeric_limits<int>::infinity();
-    chess::move move;
+    std::shared_ptr<node> best;
 
     // todo: alphazero has softmax_sample for short games
     for(std::shared_ptr<node> child: children)
     {
         if(child->visit_count > max_visit_count)
         {
-            move = child->move;
+            best = child;
             max_visit_count = child->visit_count;
         }
     }
 
-    return move;
+    return best;
 }
 
 torch::Tensor node::child_visits() const
@@ -138,7 +136,7 @@ void add_exploration_noise(node& root, float dirichlet_alpha, float exploration_
     }
 }
 
-std::pair<chess::game, std::vector<std::shared_ptr<node>>> traverse(std::shared_ptr<node> root, const chess::game& game)
+std::pair<std::vector<std::shared_ptr<node>>, chess::game> traverse(std::shared_ptr<node> root, const chess::game& game)
 {
     std::shared_ptr<node> leaf = root;
     chess::game scratch_game = game;
@@ -147,11 +145,11 @@ std::pair<chess::game, std::vector<std::shared_ptr<node>>> traverse(std::shared_
     while(leaf->expanded())
     {
         leaf = leaf->select_child();
-        scratch_game.push(action_move(leaf->action, chess::opponent(leaf->turn)));
+        scratch_game.push(leaf->move);
         search_path.push_back(leaf);
     }
 
-    return {scratch_game, search_path};
+    return {search_path, scratch_game};
 }
 
 void backpropagate(std::vector<std::shared_ptr<node>>& search_path, const torch::Tensor value, chess::side turn)
@@ -165,32 +163,56 @@ void backpropagate(std::vector<std::shared_ptr<node>>& search_path, const torch:
 }
 
 
-chess::move run_mcts(const chess::game& game, sigmanet network, int simulations)
+
+counter::counter(int limit): count{0}, limit{limit}
 {
-    return {};
 
-#if 0
-    std::shared_ptr<node> root = std::make_shared<node>();
-    evaluate(*root, game, network);
-    add_exploration_noise(*root);
+}
 
-    for(int i = 0; i < simulations; i++)
+bool counter::operator()()
+{
+    return ++count >= limit;
+}
+
+
+
+std::shared_ptr<node> run_mcts(const chess::game& game, sigmanet network, torch::Device device, std::function<bool()> stop, bool noise, std::optional<std::shared_ptr<node>> last_best)
+{
+    auto root = std::make_shared<node>();
+
+    if(last_best)
     {
-        std::shared_ptr<node> leaf = root;
-        std::vector<std::shared_ptr<node>> search_path = {leaf};
-        chess::game scratch_game = game;
-
-        while(leaf->expanded())
-        {
-            leaf = leaf->select_child();
-            scratch_game.push(leaf->move);
-            search_path.push_back(leaf);
-        }
-
-        torch::Tensor value = evaluate(*leaf, scratch_game, network);
-        backpropagate(search_path, value, scratch_game.get_position().get_turn());
+        root = *last_best;
     }
 
-    return root->select_move();
-#endif
+    auto image = game_image(game);
+    auto [value, policy] = network->forward(image.unsqueeze(0).to(device));
+
+    if(!root->expanded())
+    {
+        root->expand(game, policy.squeeze());
+    }
+
+    if(noise)
+    {
+        add_exploration_noise(*root);
+    }
+
+    while(!stop())
+    {
+        auto [search_path, scratch_game] = traverse(root, game);
+        
+        auto leaf = search_path.back();
+        image = game_image(scratch_game);        
+        auto [value, policy] = network->forward(image.unsqueeze(0).to(device));
+
+        if(!scratch_game.get_position().is_terminal())
+        {
+            leaf->expand(scratch_game, policy.squeeze());
+        }
+
+        backpropagate(search_path, value.squeeze(), scratch_game.get_position().get_turn());
+    }
+
+    return root->select_best();
 }

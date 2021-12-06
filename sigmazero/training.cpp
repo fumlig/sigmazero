@@ -64,6 +64,12 @@ static void replay_receiver(std::istream& stream, sync_queue<replay_position>& q
 
 int main(int argc, char** argv)
 {
+	const std::size_t window_size = 1 << 15;
+	const std::size_t batch_size = 256;
+
+	const unsigned epoch_batches = 1024;	// save after this number of batches
+	const unsigned checkpoint_epochs = 64;	// checkpoint after this number of saves
+
 	if(argc < 2)
 	{
 		std::cerr << "missing model path" << std::endl;
@@ -112,37 +118,30 @@ int main(int argc, char** argv)
 
 	// check cuda support
 	torch::Device device(torch::kCPU);
-    if(torch::cuda::is_available())
-    {
-        device = torch::Device(torch::kCUDA);
-        std::cerr << "using CUDA" << std::endl;
-    }
-    else
+	if(torch::cuda::is_available())
 	{
-        std::cerr << "using CPU" << std::endl;
-    }
+		device = torch::Device(torch::kCUDA);
+		std::cerr << "using CUDA" << std::endl;
+	}
+	else
+	{
+		std::cerr << "using CPU" << std::endl;
+	}
 
 	model->train();
 	model->to(device);
 	
-	//torch::optim::SGD optimizer(model->parameters(), torch::optim::SGDOptions(0.2).momentum(0.9).weight_decay(0.0001)); // varying lr
-
-	torch::optim::Adam optimizer(model->parameters());// torch::optim::AdamOptions(0.2));
+	torch::optim::AdamW optimizer(model->parameters(), torch::optim::AdamWOptions().weight_decay(0.0001));
+	//torch::optim::Adam optimizer(model->parameters(), torch::optim::AdamOptions().weight_decay(0.0001));
+	//torch::optim::SGD optimizer(model->parameters(), torch::optim::SGDOptions(0.2).momentum(0.9).weight_decay(0.0001));
 
 	// statistics
 	unsigned long long received = 0;
 	unsigned long long consumed = 0;
 
-	// replay window
-	const std::size_t window_size = 1 << 14;
-	const std::size_t batch_size = 512;
-
 	torch::Tensor window_images;
 	torch::Tensor window_values;
 	torch::Tensor window_policies;
-
-	const unsigned epoch_batches = 512;		// save after this number of batches
-	const unsigned checkpoint_epochs = 64;	// checkpoint after this number of saves
 
 	unsigned batches_since_epoch = 0;
 	unsigned epochs_since_checkpoint = 0;
