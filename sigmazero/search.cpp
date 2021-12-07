@@ -26,12 +26,7 @@ void node::expand(const chess::game& game, const torch::Tensor policy)
 {
     turn = game.get_position().get_turn();
 
-    //if(game.get_position().is_terminal())
-    //{
-    //    return;
-    //}
-
-    std::vector<chess::move> legal_moves = game.get_position().moves();
+    const std::vector<chess::move>& legal_moves = game.get_moves();
     
     float policy_sum = 0.0f;
     torch::Tensor policy_exp = torch::exp(policy);
@@ -201,17 +196,23 @@ std::shared_ptr<node> run_mcts(const chess::game& game, sigmanet network, torch:
     while(!stop(*root))
     {
         auto [search_path, scratch_game] = traverse(root, game);
-        
         auto leaf = search_path.back();
-        image = game_image(scratch_game);        
-        auto [value, policy] = network->forward(image.unsqueeze(0).to(device));
+                
+        std::optional<int> v = scratch_game.get_value(chess::opponent(scratch_game.get_position().get_turn()));
 
-        if(!scratch_game.get_position().is_terminal())
+		if(v)
+		{
+			value = torch::tensor(static_cast<float>(*v));
+            backpropagate(search_path, value, scratch_game.get_position().get_turn());
+		}
+        else
         {
+            image = game_image(scratch_game);
+            auto [value, policy] = network->forward(image.unsqueeze(0).to(device));
             leaf->expand(scratch_game, policy.squeeze());
+            backpropagate(search_path, value.squeeze(), scratch_game.get_position().get_turn());
         }
 
-        backpropagate(search_path, value.squeeze(), scratch_game.get_position().get_turn());
     }
 
     return root->select_best();

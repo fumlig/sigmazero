@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     {
         chess::game game;
 
-        while(!game.get_position().is_terminal())
+        while(!game.is_terminal())
         {
             chess::side turn = game.get_position().get_turn();
             sigmanet model = turn == seat ? model_a : model_b;

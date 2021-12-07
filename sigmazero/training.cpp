@@ -64,7 +64,7 @@ static void replay_receiver(std::istream& stream, sync_queue<replay_position>& q
 
 int main(int argc, char** argv)
 {
-	const std::size_t window_size = 1 << 14;
+	const std::size_t window_size = 1 << 13;
 	const std::size_t batch_size = 128;
 
 	const unsigned epoch_batches = 1024;	// save after this number of batches

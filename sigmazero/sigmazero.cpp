@@ -101,7 +101,6 @@ public:
             {
                 std::ostringstream child_visits;
                 for(std::shared_ptr<node> child: root.children) child_visits << child->move.to_lan() << ' ' << child->visit_count << ' ';
-
                 info.nodes(simulations);
                 info.score(best->value());
                 info.line({best->move});

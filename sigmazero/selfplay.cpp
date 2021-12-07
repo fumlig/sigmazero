@@ -60,11 +60,6 @@ struct worker
 
 	void expand_leaf(torch::Tensor policy)
 	{
-		if(scratch_game.get_position().is_terminal())
-		{
-			return;
-		}
-
 		std::shared_ptr<node> leaf = search_path.back();
 		leaf->expand(scratch_game, policy);
 	}
@@ -98,7 +93,7 @@ struct worker
 
 	bool is_terminal(std::size_t max_moves = 512)
 	{
-		return game.get_position().is_terminal() || game.size() >= max_moves;
+		return game.is_terminal() || game.size() >= max_moves;
 	}
 
 	void send_replay(std::ostream& out, bool use_terminal_value = true)

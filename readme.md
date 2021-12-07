@@ -91,3 +91,9 @@ python3 scripts/elo_est.py build/<engine>
 ## links
 
 - [Wiki](https://gitlab.liu.se/groups/tdde19-group-1/-/wikis/home) (for detailed documentation and other resources)
+
+## notes
+
+```
+pre opt: 57 seconds
+```
