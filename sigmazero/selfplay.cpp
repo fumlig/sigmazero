@@ -29,7 +29,8 @@ static std::string encode(const torch::Tensor &tensor)
 struct worker
 {
 	std::shared_ptr<node> root;
-	chess::game game = chess::game(chess::position::from_fen("1k1r4/pp4p1/1n4p1/2p3Pp/2P3n1/1P3NP1/P4PB1/1K2R3 b - - 0 31"), {});
+	chess::game game = chess::game(chess::position::from_fen("1k1r4/pp4p1/1n4p1/2p3Pp/2P3n1/1P3NP1/P4PB1/1K2R3 b - - 0 31"), {}); // Kasparov vs. Deep Blue
+	//chess::game game = chess::game(chess::position::from_fen("ppppk3/ppppppp1/ppppppp1/ppppppp1/8/8/PPPPPPPN/PPPPKPPR w K - 0 1"), {});
 
 	chess::game scratch_game;
 	std::vector<std::shared_ptr<node>> search_path;
@@ -57,7 +58,7 @@ struct worker
 		return game_image(scratch_game);
 	}
 
-	void expand_leaf(const torch::Tensor policy)
+	void expand_leaf(torch::Tensor policy)
 	{
 		if(scratch_game.get_position().is_terminal())
 		{
@@ -68,8 +69,15 @@ struct worker
 		leaf->expand(scratch_game, policy);
 	}
 
-	void backpropagate_path(const torch::Tensor value)
+	void backpropagate_path(torch::Tensor value, bool use_terminal_value = true)
 	{
+		std::optional<int> v = scratch_game.get_value(chess::opponent(scratch_game.get_position().get_turn()));
+		
+		if(use_terminal_value && v)
+		{
+			value = torch::tensor(static_cast<float>(*v));
+		}
+
 		backpropagate(search_path, value, scratch_game.get_position().get_turn());
 	}
 
@@ -110,7 +118,7 @@ struct worker
 
 			if(use_terminal_value)
 			{
-				std::optional<int> v = game.get_value(turns[i]);
+				std::optional<int> v = game.get_value(chess::opponent(turns[i])); // todo: maybe this should actually be inverted?
 				value = torch::tensor(v ? static_cast<float>(*v) : 0.0f);
 			}
 
@@ -267,8 +275,8 @@ int main(int argc, char **argv)
 
 			if(send_replay)
 			{
-				workers[i].send_replay(std::cout, send_on_termination);
 				sent += workers[i].images.size();
+				workers[i].send_replay(std::cout, send_on_termination);
 			}
 
 			if(workers[i].is_terminal(max_moves))
@@ -300,7 +308,7 @@ int main(int argc, char **argv)
 
 		searches++;
 
-		std::cerr << "batch: " << searches << " searches, " << searches*batch_size << " moves,  " << sent << " sent, " << white_wins << " white wins, " << black_wins << " black wins, " << draws << " draws" << std::endl; 
+		std::cerr << "batch: " << searches << " searches, " << searches*batch_size << " moves, " << sent << " sent, " << white_wins << " white wins, " << black_wins << " black wins, " << draws << " draws" << std::endl; 
 	}
 
 	return 0;

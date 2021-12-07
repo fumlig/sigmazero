@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <random>
 #include <chrono>
+#include <sstream>
 
 #include <chess/chess.hpp>
 #include <uci/uci.hpp>
@@ -18,7 +19,6 @@ private:
     sigmanet model;
     torch::Device device;
     chess::game game;
-    std::shared_ptr<node> next;
     
 public:
     sigmazero(sigmanet model, torch::Device device):
@@ -64,13 +64,11 @@ public:
         int ply = game.size();
         int remaining_halfmoves = 59.3 + (72830 - 2330*ply)/(2644 + ply*(10 + ply));
         float budgeted_time = clock/remaining_halfmoves; // todo: increment
-        
 
         info.message("budgeted time: " + std::to_string(budgeted_time));
         info.message("starting simulations");
 
-        // limit, info, std::ref(ponder), std::ref(stop), simulations, start_time, budgeted_time
-        auto done = [&]()
+        auto stop_search = [&](const node& root)
         {
             if(stop)
             {
@@ -97,28 +95,38 @@ public:
                 }
             }
 
-            // not really correct but whatever...
+            std::shared_ptr<node> best = root.select_best();
+
+            if(best)
+            {
+                std::ostringstream child_visits;
+                for(std::shared_ptr<node> child: root.children) child_visits << child->move.to_lan() << ' ' << child->visit_count << ' ';
+
+                info.nodes(simulations);
+                info.score(best->value());
+                info.line({best->move});
+                info.message("value " + std::to_string(best->value()));
+                info.message("visits " + child_visits.str());
+            }
+
             simulations++;
 
             return false;
         };
 
-        std::shared_ptr<node> best = run_mcts(game, model, device, done, false);
-        next = best->select_best();
-        
+        std::shared_ptr<node> best = run_mcts(game, model, device, stop_search, false);
+        std::shared_ptr<node> next = best->select_best();
+
         uci::search_result result;
         result.best = best->move;
         if(next) result.ponder = next->move;
-
-        info.score(best->value());
-        info.depth(simulations);
 
         return result;
     }
 
     void reset() override
     {
-	next = nullptr;
+
     }
 };
 

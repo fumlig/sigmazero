@@ -219,7 +219,7 @@ public:
     void line(const std::vector<chess::move>& best);
 
     // Evaluation score.
-    void score(float centipawn);
+    void score(float pawn);
 
     // New lower or upper bound found.
     void bounds(float lower, float upper);

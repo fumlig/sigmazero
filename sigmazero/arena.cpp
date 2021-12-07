@@ -53,7 +53,7 @@ int main(int argc, char** argv)
             chess::side turn = game.get_position().get_turn();
             sigmanet model = turn == seat ? model_a : model_b;
             bool noise = game.size() == 0;
-            std::shared_ptr<node> best = run_mcts(game, model, device, counter(simulations), noise);
+            std::shared_ptr<node> best = run_mcts(game, model, device, stop_after(simulations), noise);
             chess::move move = best->move;
 
             game.push(move);

@@ -303,3 +303,34 @@ float material_value(const chess::game& game, chess::side side)
 		return (p1_value - p2_value) / (p1_value + p2_value);
 	}
 }
+
+
+float material_delta(const chess::game& game, chess::side side)
+{
+	const chess::board& board = game.get_position().get_board();
+
+	float p1_value = 0.0f;
+	float p2_value = 0.0f;
+
+	for(int p = chess::piece_pawn; p < chess::piece_king; p++)
+	{
+		chess::piece piece = static_cast<chess::piece>(p);
+		p1_value += chess::value_of(piece) * chess::set_cardinality(board.piece_set(piece, side));
+		p2_value += chess::value_of(piece) * chess::set_cardinality(board.piece_set(piece, chess::opponent(side)));
+	}
+
+    float value = p1_value - p2_value;
+
+    if(value < 0.0f)
+    {
+        return -1.0f;
+    }
+    else if(value > 0.0f)
+    {
+        return 1.0f;
+    }
+    else
+    {
+        return 0.0f;
+    }
+}

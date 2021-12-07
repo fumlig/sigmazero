@@ -46,5 +46,7 @@ sigmanet make_network(int history = 2, int filters = 128, int blocks = 10);
 
 float material_value(const chess::game& game, chess::side side = chess::side_white);
 
+float material_delta(const chess::game& game, chess::side side = chess::side_white);
+
 
 #endif

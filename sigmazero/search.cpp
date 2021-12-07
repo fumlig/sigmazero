@@ -26,10 +26,10 @@ void node::expand(const chess::game& game, const torch::Tensor policy)
 {
     turn = game.get_position().get_turn();
 
-    if(game.get_position().is_terminal())
-    {
-        return;
-    }
+    //if(game.get_position().is_terminal())
+    //{
+    //    return;
+    //}
 
     std::vector<chess::move> legal_moves = game.get_position().moves();
     
@@ -164,19 +164,19 @@ void backpropagate(std::vector<std::shared_ptr<node>>& search_path, const torch:
 
 
 
-counter::counter(int limit): count{0}, limit{limit}
+stop_after::stop_after(int limit): simulation{0}, limit{limit}
 {
 
 }
 
-bool counter::operator()()
+bool stop_after::operator()(const node&)
 {
-    return ++count >= limit;
+    return ++simulation >= limit;
 }
 
 
 
-std::shared_ptr<node> run_mcts(const chess::game& game, sigmanet network, torch::Device device, std::function<bool()> stop, bool noise, std::optional<std::shared_ptr<node>> last_best)
+std::shared_ptr<node> run_mcts(const chess::game& game, sigmanet network, torch::Device device, stop_cond stop, bool noise, std::optional<std::shared_ptr<node>> last_best)
 {
     auto root = std::make_shared<node>();
 
@@ -198,7 +198,7 @@ std::shared_ptr<node> run_mcts(const chess::game& game, sigmanet network, torch:
         add_exploration_noise(*root);
     }
 
-    while(!stop())
+    while(!stop(*root))
     {
         auto [search_path, scratch_game] = traverse(root, game);
         

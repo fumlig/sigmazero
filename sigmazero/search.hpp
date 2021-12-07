@@ -45,16 +45,18 @@ std::pair<std::vector<std::shared_ptr<node>>, chess::game> traverse(std::shared_
 void backpropagate(std::vector<std::shared_ptr<node>>& search_path, const torch::Tensor value, chess::side turn);
 
 
-struct counter
+using stop_cond = std::function<bool(const node& root)>;
+
+struct stop_after
 {
-    int count;
+    int simulation;
     const int limit;
 
-    counter(int limit);
-    bool operator()();
+    stop_after(int limit);
+    bool operator()(const node&);
 };
 
-std::shared_ptr<node> run_mcts(const chess::game& game, sigmanet network, torch::Device device, std::function<bool()> stop, bool noise = false, std::optional<std::shared_ptr<node>> last_best = std::nullopt);
+std::shared_ptr<node> run_mcts(const chess::game& game, sigmanet network, torch::Device device, stop_cond stop, bool noise = false, std::optional<std::shared_ptr<node>> last_best = std::nullopt);
 
 
 #endif
