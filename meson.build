@@ -117,3 +117,9 @@ arena = executable(
 	['sigmazero/arena.cpp'] + sigmazero_src,
 	dependencies : [libchess_dep, torch_dep]
 )
+
+kvist = executable(
+	'kvist',
+	'kvist/engine.cpp',
+	dependencies : [libchess_dep, uci_dep, thread_dep]
+)

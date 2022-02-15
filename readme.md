@@ -1,4 +1,15 @@
-# Tjack
+# sigmazero
+
+Implementation of the [AlphaZero](https://arxiv.org/abs/1712.01815) algorithm.
+
+Feature highlights:
+
+- Fast generation of legal moves using [magic bitboards](https://www.chessprogramming.org/Magic_Bitboards).
+- Distributed training with one training process and multiple self-play processes.
+- Batched Monte Carlo tree search.
+- Communication with user interfaces and [lichess.org](https://lichess.org/) using [UCI](https://www.chessprogramming.org/UCI).
+
+Originally a group project in [TDDE19](https://www.ida.liu.se/~TDDE19/) at Linköping University.
 
 ## setup
 
@@ -30,35 +41,21 @@ cd build
 ninja
 ```
 
-### olympen
+## running
 
-Make sure the machine you are on has the correct versions of g++ and CUDA:
+Run one selfplayer and one trainer:
 
-```sh
-g++ version
-# look for 'g++ (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0'
-
-nvidia-smi
-# look for 'CUDA Version: 11.2'
+```bash
+model=model.pt
+./selfplay $model | ./training $model
 ```
 
-olympen1-117.ad.liu.se is known to not satisfy these requirements and will not work.
+Run multiple selfplayers and one trainer:
 
-Ensure that CUDA is available:
-
-```sh
-./scripts/has_cuda.py
+```bash
+model=model.pt
+./training $model <(./selfplay $model) <(./selfplay $model) <(./selfplay $model)
 ```
-
-Set up build directory:
-
-```sh
-meson build -D_GLIBCXX_USE_CXX11_ABI=0
-```
-
-## engines
-
-To create an engine, you can copy the [example](example) directory and edit the files accordingly. You also have to add the engine to the [build script](meson.build).
 
 ## lichess
 
@@ -86,14 +83,4 @@ Estimate Elo rating of of engine:
 
 ```
 python3 scripts/elo_est.py build/<engine>
-```
-
-## links
-
-- [Wiki](https://gitlab.liu.se/groups/tdde19-group-1/-/wikis/home) (for detailed documentation and other resources)
-
-## notes
-
-```
-pre opt: 57 seconds
 ```

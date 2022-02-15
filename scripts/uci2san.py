@@ -7,7 +7,6 @@ board = chess.Board()
 moves = sys.argv[1:]
 lines = False
 
-
 for ply, lan in enumerate(moves):
     move = board.parse_uci(lan)
     san = board.san(move)
