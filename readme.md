@@ -4,7 +4,7 @@ Implementation of the [AlphaZero](https://arxiv.org/abs/1712.01815) algorithm.
 
 Feature highlights:
 
-- Fast generation of legal moves using [magic bitboards](https://www.chessprogramming.org/Magic_Bitboards).
+- Fast generation of legal moves using custom chess library [libchess](https://git.oskarlundin.com/oskar/libchess).
 - Distributed training with one training process and multiple self-play processes.
 - Batched Monte Carlo tree search.
 - Communication with user interfaces and [lichess.org](https://lichess.org/) using [UCI](https://www.chessprogramming.org/UCI).
